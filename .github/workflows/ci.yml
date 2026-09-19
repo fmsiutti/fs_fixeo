@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Prisma generate no se conecta a una base: alcanza con una url con forma valida.
+      DATABASE_URL: "postgresql://fixeo:fixeo@localhost:5432/fixeo?schema=public"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Build de packages/shared
+        run: pnpm --filter @fixeo/shared run build
+
+      - name: Generar Prisma Client
+        run: pnpm --filter @fixeo/api exec prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
