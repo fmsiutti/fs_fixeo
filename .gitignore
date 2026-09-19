@@ -11,8 +11,8 @@ apps/web/dev-dist/
 .env
 .env.*.local
 
-# prisma
-apps/api/prisma/generated/
+# prisma (cliente generado, se regenera con `prisma generate`)
+apps/api/src/generated/
 
 # editores / SO
 .DS_Store
