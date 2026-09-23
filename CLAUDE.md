@@ -8,9 +8,9 @@ Marketplace de oficios para el AMBA (piloto). El cliente publica un **pedido**, 
 
 - `docs/dominio.md`: **la fuente de verdad del negocio**. Estados, reglas, visibilidad de datos, modelo de datos, notificaciones, eventos y las decisiones que cerraron los huecos del documento (§12).
 - `docs/pantallas.md`: índice de pantallas (CL, PR, CO, AD) con ruta y reglas clave.
-- "Fixeo — Documento funcional v1": origen de los dos anteriores. `docs/dominio.md` §12 lista las once decisiones (D1 a D11) donde se aparta del documento a propósito. Fuera de esas, si el código y el documento se contradicen, gana el documento; avisá antes de desviarte.
+- "Fixeo — Documento funcional v1": origen de los dos anteriores. `docs/dominio.md` §12 lista las decisiones (D1 a D13) donde se aparta del documento a propósito. Fuera de esas, si el código y el documento se contradicen, gana el documento; avisá antes de desviarte.
 - Reglas por app: `apps/api/CLAUDE.md` y `apps/web/CLAUDE.md`.
-- `docs/design-base.html`: Base del diseño de toda la aplicación. Usar como referencia visual para todas las pantallas. Si se contradice con algo del dominio o reglas de negocio, respeta el dominio y adapta el diseño. 
+- `docs/design-base.html`: Base del diseño de toda la aplicación. Usar como referencia visual para todas las pantallas. Si se contradice con algo del dominio o reglas de negocio, respeta el dominio y adapta el diseño.
 
 ## Stack
 
@@ -49,7 +49,7 @@ pnpm -F web e2e                           # Playwright
 - **Dominio en español, sin tildes ni ñ**: `Pedido`, `Postulacion`, `contacto_habilitado`, `resenia`, `anios_experiencia`. Usá el vocabulario exacto de `docs/dominio.md` §1, siempre igual en UI, API, código y eventos.
 - **Todo lo técnico en inglés**: `Service`, `Controller`, `create`, `findMany`, `useQuery`.
 - JSON de la API y código TS en `camelCase`; tablas y columnas en `snake_case` (vía `@map`); enums y eventos en `snake_case`; URLs en español, plural, kebab-case (`/pedidos`, `/postulaciones`).
-- UI en español rioplatense con voseo («Publicá», «Elegí»). Se dice *estimación* (nunca «presupuesto») y *elegir* o *seleccionar* (nunca «contratar»).
+- UI en español rioplatense con voseo («Publicá», «Elegí»). Se dice _estimación_ (nunca «presupuesto») y _elegir_ o _seleccionar_ (nunca «contratar»).
 - Commits en español con prefijo convencional (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`). Comentarios solo para explicar el porqué.
 
 ## Anti-sobreingeniería (reglas duras)
@@ -80,7 +80,7 @@ Detalle en `docs/dominio.md`.
 ## Cómo trabajar
 
 - Antes de codear leé la ficha o regla en `docs/`. Si tocás más de 3 archivos, escribí un plan de 5 a 8 líneas y avanzá.
-- Los huecos del documento ya están decididos en `docs/dominio.md` §12 (D1 a D11): implementalos tal cual, sin volver a preguntar. Si aparece un caso que ninguna decisión cubre, **preguntá**; no inventes reglas de negocio.
+- Los huecos del documento ya están decididos en `docs/dominio.md` §12 (D1 a D13): implementalos tal cual, sin volver a preguntar. Si aparece un caso que ninguna decisión cubre, **preguntá**; no inventes reglas de negocio.
 - Trabajá en **slices verticales** (DB → API → pantalla → tests), en el orden de `docs/plan-de-construccion.md`.
 - Delegá en los agentes de `.claude/agents/`:
   - `db-migrations`: schema Prisma, migraciones, PostGIS, seed.
@@ -103,5 +103,5 @@ Detalle en `docs/dominio.md`.
 
 - **Técnicas**: PWA (no app nativa), monorepo pnpm, PostgreSQL + PostGIS + Prisma, dominio en español y técnico en inglés, back office en `/admin` de la misma app, Twilio Verify, S3/R2, BullMQ, Web Push + WhatsApp Cloud API.
 - **De producto** (documento §18): las 8 categorías del piloto, sin chat interno, hasta 3 profesionales elegibles, estimación opcional, trato de vos.
-- **De dominio**: las once de `docs/dominio.md` §12. Las dos que más cambian el código: el pedido entra **una sola vez** a `contacto_habilitado` y las postulaciones no elegidas siguen vivas mientras quede cupo de elegibles (D2, D3); y el video del pedido queda fuera de la v1 (D8).
+- **De dominio**: las de `docs/dominio.md` §12. Las dos que más cambian el código: el pedido entra **una sola vez** a `contacto_habilitado` y las postulaciones no elegidas siguen vivas mientras quede cupo de elegibles (D2, D3); y el video del pedido queda fuera de la v1 (D8).
 - Todo esto está cerrado. No hay decisiones de negocio pendientes que bloqueen construir.
