@@ -161,3 +161,124 @@ export const pedidoResumenVistaSchema = z.object({
 });
 
 export type PedidoResumenVista = z.infer<typeof pedidoResumenVistaSchema>;
+
+// --- Feed y detalle para el profesional (PR-02, PR-03, docs/dominio.md §6) ---
+
+// Filtros de PR-02: "oficio, distancia, urgencia, con fotos, sin
+// postulaciones". `categoriaId` sirve para acotar a un oficio puntual cuando
+// el profesional tiene varios; sin filtro, el feed ya viene acotado a sus
+// oficios y su zona. `distanciaMaxKm` solo tiene efecto sobre coincidencias
+// por zona tipo "radio": una zona tipo "barrios" no tiene una distancia
+// numerica que comparar (ver distanciaKm mas abajo).
+// OJO: `z.coerce.boolean()` convierte CUALQUIER string no vacio (incluido
+// "false") en `true` (revision de codigo del slice 5): un query string
+// siempre manda strings, asi que ese schema nunca podia expresar "false" de
+// verdad. Se valida el string exacto y se transforma a mano.
+const booleanoDeQuerySchema = z
+  .enum(["true", "false"])
+  .transform((valor) => valor === "true")
+  .optional();
+
+export const pedidoFeedFiltrosSchema = z.object({
+  categoriaId: z.string().uuid().optional(),
+  urgencia: urgenciaSchema.optional(),
+  conFotos: booleanoDeQuerySchema,
+  sinPostulaciones: booleanoDeQuerySchema,
+  distanciaMaxKm: z.coerce.number().positive().optional(),
+  cursor: z.string().uuid().optional(),
+});
+
+export type PedidoFeedFiltros = z.infer<typeof pedidoFeedFiltrosSchema>;
+
+// Tarjeta de PR-02: "barrio, distancia, urgencia, antigüedad, postulados".
+// Sin datos del cliente (ni siquiera el nombre de pila: eso es PR-03).
+export const pedidoFeedItemVistaSchema = z.object({
+  id: z.string().uuid(),
+  categoria: z.object({
+    nombre: z.string(),
+    slug: z.string(),
+  }),
+  urgencia: urgenciaSchema,
+  barrio: z.object({
+    id: z.string().uuid(),
+    nombre: z.string(),
+  }),
+  // Null cuando la zona del profesional que pide el feed es tipo "barrios"
+  // (no hay coordenada de barrio en el catalogo para medir distancia real).
+  distanciaKm: z.number().nullable(),
+  cantidadPostulaciones: z.number(),
+  tieneFotos: z.boolean(),
+  // D2/D3 (docs/dominio.md §12): el pedido sigue en el feed marcado asi
+  // mientras quede cupo de elegibles.
+  yaEligioAlguien: z.boolean(),
+  publicadoEn: z.string().nullable(),
+  creadoEn: z.string(),
+});
+
+export type PedidoFeedItemVista = z.infer<typeof pedidoFeedItemVistaSchema>;
+
+// `verificacionAprobada` es el dato para el banner de PR-02 ("Verificación
+// pendiente: feed visible, postulaciones bloqueadas"): el profesional ve el
+// feed igual, pero el front usa este flag para avisarle que todavia no puede
+// postularse (docs/dominio.md §6).
+export const pedidoFeedPaginaSchema = z.object({
+  items: z.array(pedidoFeedItemVistaSchema),
+  cursor: z.string().uuid().nullable(),
+  verificacionAprobada: z.boolean(),
+});
+
+export type PedidoFeedPagina = z.infer<typeof pedidoFeedPaginaSchema>;
+
+// Detalle de PR-03 para el profesional. A diferencia de PedidoVista (dueno
+// del pedido), nunca incluye telefono, apellido ni direccion exacta del
+// cliente (docs/dominio.md §7: eso es solo para el elegido, en el slice de
+// contacto). Cuando el pedido ya completo sus 3 elegidos, el backend no
+// devuelve esta vista: tira un conflicto especifico para que el front
+// muestre "el cliente ya completó su elección" y vuelva al feed (ficha
+// PR-03).
+export const pedidoVistaProfesionalSchema = z.object({
+  id: z.string().uuid(),
+  categoria: z.object({
+    id: z.string().uuid(),
+    nombre: z.string(),
+    slug: z.string(),
+  }),
+  subcategoria: z.string().nullable(),
+  descripcion: z.string(),
+  respuestasGuia: z.record(z.string(), z.string()).nullable(),
+  urgencia: urgenciaSchema,
+  franjas: z.array(franjaSchema),
+  barrio: z.object({
+    id: z.string().uuid(),
+    nombre: z.string(),
+  }),
+  distanciaKm: z.number().nullable(),
+  fotos: z.array(
+    z.object({
+      id: z.string().uuid(),
+      url: z.string(),
+      orden: z.number(),
+    }),
+  ),
+  estado: estadoPedidoSchema,
+  // Nombre de pila del cliente, la unica identidad que se ve antes de la
+  // seleccion (docs/dominio.md §7).
+  cliente: z.object({
+    nombre: z.string().nullable(),
+  }),
+  cantidadPostulaciones: z.number(),
+  // PR-03: "Cupo de postulaciones lleno: boton deshabilitado con el motivo".
+  postulacionesCupoLleno: z.boolean(),
+  // D2/D3: sigue vivo mientras seleccionablesLibres > 0.
+  yaEligioAlguien: z.boolean(),
+  seleccionablesLibres: z.number(),
+  // docs/dominio.md §6: "un profesional sin verificacion aprobada ve el feed
+  // pero no puede postularse". PR-02 ya lo banner-ea a nivel pagina; PR-03
+  // necesita el mismo dato para deshabilitar "Postularme" con el motivo
+  // (revision de codigo del slice 5: antes solo se chequeaba el cupo).
+  verificacionAprobada: z.boolean(),
+  publicadoEn: z.string().nullable(),
+  creadoEn: z.string(),
+});
+
+export type PedidoVistaProfesional = z.infer<typeof pedidoVistaProfesionalSchema>;

@@ -42,6 +42,7 @@ model Usuario {
   pedidos           Pedido[]
   perfilProfesional PerfilProfesional?
   accesosDocumento  AccesoDocumento[]
+  denuncias         Denuncia[]
 
   @@map("usuario")
 }
@@ -273,6 +274,12 @@ model PerfilProfesional {
   zonaCobertura  ZonaCobertura?
   verificaciones Verificacion[]
 
+  // docs/dominio.md §6: un profesional entra al matching y al feed solo si
+  // "su verificacion esta aprobada y su perfil no esta pausado". Ambos
+  // filtros se aplican juntos en cada consulta de coincidencia, antes del
+  // join con OficioProfesional; para el tamano de un piloto un solo indice
+  // compuesto alcanza (no hace falta uno por columna).
+  @@index([estadoVerificacion, pausado])
   @@map("perfil_profesional")
 }
 
@@ -293,6 +300,9 @@ model OficioProfesional {
 
   @@unique([perfilId, categoriaId])
   @@index([perfilId])
+  // Slice 5: buscar coincidentes de un pedido (o armar el feed de un
+  // profesional) filtra por categoria sola, sin perfilId.
+  @@index([categoriaId])
   @@map("oficio_profesional")
 }
 
@@ -367,4 +377,52 @@ model Notificacion {
   @@unique([usuarioId, tipo, objetoId])
   @@index([usuarioId])
   @@map("notificacion")
+}
+
+enum TipoObjetoDenuncia {
+  pedido
+  postulacion
+  perfil
+  resenia
+
+  @@map("tipo_objeto_denuncia")
+}
+
+enum EstadoDenuncia {
+  pendiente
+  resuelta
+  descartada
+
+  @@map("estado_denuncia")
+}
+
+// docs/dominio.md §11/§15: canal de denuncia en perfil, pedido y
+// postulacion (y resenia, §8). objetoId no tiene FK a proposito, mismo
+// espiritu que EventoAnalitico: es polimorfico (pedido, postulacion,
+// perfil_profesional o resenia segun tipoObjeto) y no hay una unica tabla
+// destino a la que apuntar, asi que la integridad referencial la valida el
+// service, no la base. reportanteId si tiene FK con onDelete Restrict,
+// mismo criterio que AccesoDocumento.moderadorId: es un registro con valor
+// de auditoria/moderacion, no se puede perder ni borrar en cascada al
+// eliminar la cuenta.
+model Denuncia {
+  id           String             @id @default(uuid())
+  reportanteId String             @map("reportante_id")
+  tipoObjeto   TipoObjetoDenuncia @map("tipo_objeto")
+  objetoId     String             @map("objeto_id")
+  motivo       String
+  detalle      String?
+  estado       EstadoDenuncia     @default(pendiente)
+  resueltaEn   DateTime?          @map("resuelta_en")
+  // Adicion tecnica del mismo tipo que las que lista docs/dominio.md §11
+  // bajo "Campos agregados a lo que modela el documento": el documento no
+  // la lista, pero sin ella no se puede ordenar ni paginar la futura cola
+  // de moderacion de denuncias (slice 9).
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  reportante Usuario @relation(fields: [reportanteId], references: [id], onDelete: Restrict)
+
+  @@index([tipoObjeto, objetoId])
+  @@index([estado])
+  @@map("denuncia")
 }

@@ -7,6 +7,7 @@ import { AppController } from "./app.controller.js";
 import { validateEnv } from "./config/env.schema.js";
 import { FiltroErrores } from "./common/filters/errores.filter.js";
 import { PrismaModule } from "./infra/prisma/prisma.module.js";
+import { QueueModule } from "./infra/queue/queue.module.js";
 import { ParametrosModule } from "./modules/parametros/parametros.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { UsuariosModule } from "./modules/usuarios/usuarios.module.js";
@@ -17,7 +18,9 @@ import { PedidosModule } from "./modules/pedidos/pedidos.module.js";
 import { ProfesionalesModule } from "./modules/profesionales/profesionales.module.js";
 import { NotificacionesModule } from "./modules/notificaciones/notificaciones.module.js";
 import { VerificacionesModule } from "./modules/verificaciones/verificaciones.module.js";
+import { DenunciasModule } from "./modules/denuncias/denuncias.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
+import { JobsModule } from "./jobs/jobs.module.js";
 
 @Module({
   imports: [
@@ -26,6 +29,7 @@ import { AdminModule } from "./modules/admin/admin.module.js";
       validate: validateEnv,
     }),
     PrismaModule,
+    QueueModule,
     ParametrosModule,
     AuthModule,
     UsuariosModule,
@@ -36,7 +40,9 @@ import { AdminModule } from "./modules/admin/admin.module.js";
     ProfesionalesModule,
     NotificacionesModule,
     VerificacionesModule,
+    DenunciasModule,
     AdminModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [

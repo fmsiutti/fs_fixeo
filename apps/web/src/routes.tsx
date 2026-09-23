@@ -14,6 +14,9 @@ import { EditarPedidoPage } from "./features/pedidos/pages/EditarPedidoPage";
 import { ArmarPerfilPage } from "./features/perfil/pages/ArmarPerfilPage";
 import { MiPerfilPage } from "./features/perfil/pages/MiPerfilPage";
 import { ColaVerificacionesPage } from "./features/admin/pages/ColaVerificacionesPage";
+import { FeedTrabajosPage } from "./features/feed/pages/FeedTrabajosPage";
+import { FeedDetalleTrabajoPage } from "./features/feed/pages/FeedDetalleTrabajoPage";
+import { NoEncontradaPage } from "./features/comunes/pages/NoEncontradaPage";
 import { RutaConRol } from "./components/RutaConRol";
 
 export const router = createBrowserRouter([
@@ -82,11 +85,31 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/trabajos",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <FeedTrabajosPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/trabajos/:id",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <FeedDetalleTrabajoPage />
+      </RutaConRol>
+    ),
+  },
+  {
     path: "/admin/verificaciones",
     element: (
       <RutaConRol roles={["moderador", "soporte"]}>
         <ColaVerificacionesPage />
       </RutaConRol>
     ),
+  },
+  {
+    path: "*",
+    element: <NoEncontradaPage />,
   },
 ]);

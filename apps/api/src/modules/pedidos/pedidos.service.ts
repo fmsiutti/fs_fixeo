@@ -6,6 +6,8 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
+import { InjectQueue } from "@nestjs/bullmq";
+import type { Queue } from "bullmq";
 import type {
   CrearPedido,
   EditarPedido,
@@ -22,6 +24,10 @@ import {
   PROVEEDOR_ALMACENAMIENTO,
   type ProveedorAlmacenamiento,
 } from "../../infra/almacenamiento/proveedor-almacenamiento.js";
+import {
+  COLA_AVISO_MATCHING,
+  type AvisoMatchingJobData,
+} from "../../infra/queue/colas.constants.js";
 import { clavePedidoFotoBorrador } from "../archivos/claves-almacenamiento.js";
 import { EventosService } from "../eventos/eventos.service.js";
 import { ParametrosService } from "../parametros/parametros.service.js";
@@ -54,6 +60,8 @@ export class PedidosService {
     private readonly parametros: ParametrosService,
     @Inject(PROVEEDOR_ALMACENAMIENTO) private readonly almacenamiento: ProveedorAlmacenamiento,
     private readonly eventos: EventosService,
+    @InjectQueue(COLA_AVISO_MATCHING)
+    private readonly colaAvisoMatching: Queue<AvisoMatchingJobData>,
   ) {}
 
   async crear(usuarioId: string, datos: CrearPedido): Promise<PedidoVista> {
@@ -224,7 +232,9 @@ export class PedidosService {
     // docs/dominio.md §10: evento del mismo cambio que la accion. Solo cuando
     // el pedido queda publicado de una: en_revision todavia no es una
     // publicacion real (D1: recien lo es si el moderador lo aprueba, eso
-    // pertenece al slice de moderacion).
+    // pertenece al slice de moderacion). Nota para ese futuro endpoint
+    // (en_revision -> publicado, slice 9): tiene que llamar tambien a
+    // encolarAvisoMatchingSeguro, igual que aca.
     if (pedidoCreado.estado === "publicado") {
       await this.registrarEventoSeguro({
         tipo: "pedido_publicado",
@@ -234,6 +244,11 @@ export class PedidosService {
         usuarioId,
         pedidoId: pedidoCreado.id,
       });
+      // Slice 5 (docs/dominio.md §6): calcula coincidentes y avisa a los
+      // primeros `notificados_iniciales`. Encolado, no en linea: el matching
+      // hace una consulta geoespacial que no tiene por que demorar la
+      // respuesta de "pedido creado".
+      await this.encolarAvisoMatchingSeguro(pedidoCreado.id);
     }
 
     return mapearPedidoAVista(pedidoCreado);
@@ -252,6 +267,15 @@ export class PedidosService {
       await this.eventos.registrar(datos);
     } catch (error) {
       this.logger.warn(`No se pudo registrar el evento "${datos.tipo}": ${String(error)}`);
+    }
+  }
+
+  /** Mismo criterio que registrarEventoSeguro: el pedido ya existe, no encolar el aviso no puede tumbar la respuesta. */
+  private async encolarAvisoMatchingSeguro(pedidoId: string): Promise<void> {
+    try {
+      await this.colaAvisoMatching.add("aviso-matching", { pedidoId });
+    } catch (error) {
+      this.logger.warn(`No se pudo encolar el aviso de matching: ${String(error)}`);
     }
   }
 

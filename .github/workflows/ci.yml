@@ -22,8 +22,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: "postgresql://fixeo:fixeo@localhost:5432/fixeo?schema=public"
+      REDIS_URL: "redis://localhost:6379"
       # No son secretos reales: solo hace falta que la api pueda arrancar en CI.
       JWT_ACCESS_SECRET: "ci-secreto-de-prueba-no-usar-en-produccion"
       TWILIO_DRIVER: "log"

@@ -179,6 +179,14 @@ const parametros: { clave: string; valor: number | string }[] = [
   { clave: "fotos_max", valor: 6 },
   { clave: "documentos_verificacion_max", valor: 5 },
   { clave: "limite_diario_zona_horaria", valor: "America/Argentina/Buenos_Aires" },
+  // Slice 5: docs/dominio.md §6 dice "los pedidos de emergencia se destacan y
+  // amplian el radio de aviso", sin fijar un numero. Es un parametro nuevo,
+  // no una decision D1-D13 con valor cerrado en el documento: factor por el
+  // que se multiplica el radioKm de un profesional con zona tipo "radio" al
+  // calcular coincidentes de un pedido con urgencia = emergencia (regla de
+  // negocio #3 del CLAUDE.md raiz: limites y tiempos salen de
+  // ParametrosService, nunca constantes hardcodeadas).
+  { clave: "radio_aviso_emergencia_factor", valor: 1.5 },
 ];
 
 // Los tres upsert de abajo son deliberadamente "create-only" en el `update`

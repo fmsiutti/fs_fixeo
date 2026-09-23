@@ -105,3 +105,22 @@ export const TIPOS_VERIFICACION = ["identidad", "matricula"] as const;
 export const tipoVerificacionSchema = z.enum(TIPOS_VERIFICACION);
 
 export type TipoVerificacion = z.infer<typeof tipoVerificacionSchema>;
+
+// Denuncia (documento §11.3/§15): por ahora solo "pedido" tiene un boton que
+// la dispara (PR-03, slice 5); postulacion, perfil y resenia se conectan en
+// los slices que agregan esas pantallas. El enum ya incluye los cuatro para
+// no tener que tocar el contrato de nuevo, pero el backend de este slice solo
+// acepta "pedido".
+export const TIPOS_OBJETO_DENUNCIA = ["pedido", "postulacion", "perfil", "resenia"] as const;
+
+export const tipoObjetoDenunciaSchema = z.enum(TIPOS_OBJETO_DENUNCIA);
+
+export type TipoObjetoDenuncia = z.infer<typeof tipoObjetoDenunciaSchema>;
+
+// La cola de resolucion (pendiente -> resuelta/descartada) es AD-02 (slice 9).
+// Este slice solo crea denuncias en "pendiente".
+export const ESTADOS_DENUNCIA = ["pendiente", "resuelta", "descartada"] as const;
+
+export const estadoDenunciaSchema = z.enum(ESTADOS_DENUNCIA);
+
+export type EstadoDenuncia = z.infer<typeof estadoDenunciaSchema>;

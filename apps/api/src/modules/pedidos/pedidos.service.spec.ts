@@ -1,10 +1,12 @@
 import { describe, expect, it, jest } from "@jest/globals";
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import type { Queue } from "bullmq";
 import type { CrearPedido, EditarPedido } from "@fixeo/shared";
 import type { EventosService } from "../eventos/eventos.service.js";
 import type { ParametrosService } from "../parametros/parametros.service.js";
 import type { PrismaService } from "../../infra/prisma/prisma.service.js";
 import type { ProveedorAlmacenamiento } from "../../infra/almacenamiento/proveedor-almacenamiento.js";
+import type { AvisoMatchingJobData } from "../../infra/queue/colas.constants.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { PedidosService } from "./pedidos.service.js";
 
@@ -184,13 +186,17 @@ function crearService(
   const eventos = {
     registrar: jest.fn<(datos: unknown) => Promise<void>>(),
   } as unknown as EventosService;
+  const colaAvisoMatching = {
+    add: jest.fn<(...args: unknown[]) => Promise<unknown>>().mockResolvedValue(undefined),
+  } as unknown as Queue<AvisoMatchingJobData>;
   const service = new PedidosService(
     prisma as unknown as PrismaService,
     parametros,
     almacenamiento,
     eventos,
+    colaAvisoMatching,
   );
-  return { service, prisma, tx, parametros, almacenamiento, eventos };
+  return { service, prisma, tx, parametros, almacenamiento, eventos, colaAvisoMatching };
 }
 
 /** Ejecuta una promesa que se espera rechazada y devuelve el error para inspeccionarlo. */
@@ -205,7 +211,7 @@ async function capturarError(promesa: Promise<unknown>): Promise<unknown> {
 
 describe("PedidosService.crear", () => {
   it("publica directo (fija publicadoEn y expiraEn) cuando la categoria no es 'otro' y la descripcion esta limpia", async () => {
-    const { service, tx, eventos } = crearService();
+    const { service, tx, eventos, colaAvisoMatching } = crearService();
 
     const vista = await service.crear("cliente-1", crearDatosPedido());
 
@@ -225,6 +231,37 @@ describe("PedidosService.crear", () => {
     expect(eventos.registrar).toHaveBeenCalledWith(
       expect.objectContaining({ tipo: "pedido_publicado", usuarioId: "cliente-1" }),
     );
+    // docs/dominio.md §6: al publicar se encola el calculo de coincidentes.
+    expect(colaAvisoMatching.add).toHaveBeenCalledWith(
+      "aviso-matching",
+      expect.objectContaining({ pedidoId: crearPedidoCreado().id }),
+    );
+  });
+
+  it("no encola el aviso de matching cuando el pedido queda en_revision", async () => {
+    const { service, colaAvisoMatching } = crearService({
+      pedidoCreado: crearPedidoCreado({ estado: "en_revision", publicadoEn: null, expiraEn: null }),
+    });
+
+    await service.crear(
+      "cliente-1",
+      crearDatosPedido({ descripcion: "Comuniquense al 11 4444 5555 para coordinar, gracias" }),
+    );
+
+    expect(colaAvisoMatching.add).not.toHaveBeenCalled();
+  });
+
+  // Mismo criterio que el evento de analitica: el pedido ya se creo, un fallo
+  // al encolar el aviso no puede convertirse en un 500.
+  it("no rompe la publicacion si falla el encolado del aviso de matching", async () => {
+    const { service, colaAvisoMatching } = crearService();
+    (
+      colaAvisoMatching.add as jest.Mock<(...args: unknown[]) => Promise<unknown>>
+    ).mockRejectedValue(new Error("redis caido"));
+
+    const vista = await service.crear("cliente-1", crearDatosPedido());
+
+    expect(vista.estado).toBe("publicado");
   });
 
   // Bug real encontrado en revisión: un pedido ya creado con exito no puede
