@@ -15,6 +15,7 @@ export const envSchema = z.object({
   TWILIO_ACCOUNT_SID: optionalString(),
   TWILIO_AUTH_TOKEN: optionalString(),
   TWILIO_VERIFY_SERVICE_SID: optionalString(),
+  STORAGE_DRIVER: z.enum(["log", "s3"]).default("log"),
   S3_ENDPOINT: optionalString(),
   S3_REGION: optionalString(),
   S3_BUCKET: optionalString(),

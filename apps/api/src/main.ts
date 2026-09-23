@@ -4,10 +4,20 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module.js";
 import type { Env } from "./config/env.schema.js";
+import {
+  DIRECTORIO_ALMACENAMIENTO_LOG,
+  PREFIJO_ALMACENAMIENTO_LOG,
+} from "./infra/almacenamiento/almacenamiento.constants.js";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService<Env, true>);
+
+  // La carpeta de disco del driver "log" de almacenamiento solo tiene
+  // sentido servirla en desarrollo: en produccion el driver activo es S3/R2.
+  if (configService.get("STORAGE_DRIVER", { infer: true }) === "log") {
+    app.useStaticAssets(DIRECTORIO_ALMACENAMIENTO_LOG, { prefix: PREFIJO_ALMACENAMIENTO_LOG });
+  }
 
   // Confia solo en el primer proxy (el balanceador/reverse-proxy propio):
   // sin esto, `request.ip` (usado por LimiteSolicitudesGuard) devuelve la IP

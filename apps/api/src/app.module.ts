@@ -11,6 +11,9 @@ import { ParametrosModule } from "./modules/parametros/parametros.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { UsuariosModule } from "./modules/usuarios/usuarios.module.js";
 import { CatalogoModule } from "./modules/catalogo/catalogo.module.js";
+import { ArchivosModule } from "./modules/archivos/archivos.module.js";
+import { EventosModule } from "./modules/eventos/eventos.module.js";
+import { PedidosModule } from "./modules/pedidos/pedidos.module.js";
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { CatalogoModule } from "./modules/catalogo/catalogo.module.js";
     AuthModule,
     UsuariosModule,
     CatalogoModule,
+    ArchivosModule,
+    EventosModule,
+    PedidosModule,
   ],
   controllers: [AppController],
   providers: [

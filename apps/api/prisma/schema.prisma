@@ -39,6 +39,7 @@ model Usuario {
   ultimoAcceso DateTime?     @map("ultimo_acceso")
 
   refreshTokens RefreshToken[]
+  pedidos       Pedido[]
 
   @@map("usuario")
 }
@@ -74,6 +75,8 @@ model Categoria {
   requiereMatricula ExigenciaMatricula @map("requiere_matricula")
   activa            Boolean            @default(true)
 
+  pedidos Pedido[]
+
   @@map("categoria")
 }
 
@@ -81,6 +84,9 @@ model Barrio {
   id     String  @id @default(uuid())
   nombre String  @unique
   activo Boolean @default(false)
+
+  direcciones Direccion[]
+  pedidos     Pedido[]
 
   @@map("barrio")
 }
@@ -91,4 +97,124 @@ model ParametroNegocio {
   valor Json
 
   @@map("parametro_negocio")
+}
+
+enum TipoPropiedad {
+  casa
+  departamento
+  otro
+
+  @@map("tipo_propiedad")
+}
+
+model Direccion {
+  id            String        @id @default(uuid())
+  calle         String
+  numero        String
+  piso          String?
+  depto         String?
+  tipoPropiedad TipoPropiedad @map("tipo_propiedad")
+  barrioId      String        @map("barrio_id")
+  lat           Float
+  lng           Float
+  creadoEn      DateTime      @default(now()) @map("creado_en")
+
+  barrio  Barrio   @relation(fields: [barrioId], references: [id], onDelete: Restrict)
+  pedidos Pedido[]
+
+  @@index([barrioId])
+  @@map("direccion")
+}
+
+enum EstadoPedido {
+  borrador
+  en_revision
+  publicado
+  con_postulaciones
+  contacto_habilitado
+  cerrado
+  expirado
+  cancelado
+  bloqueado
+
+  @@map("estado_pedido")
+}
+
+enum Urgencia {
+  emergencia
+  esta_semana
+  sin_apuro
+
+  @@map("urgencia")
+}
+
+model Pedido {
+  id                    String       @id @default(uuid())
+  clienteId             String       @map("cliente_id")
+  categoriaId           String       @map("categoria_id")
+  subcategoria          String?
+  descripcion           String
+  respuestasGuia        Json?        @map("respuestas_guia")
+  urgencia              Urgencia
+  franjas               String[]     @default([])
+  direccionId           String       @map("direccion_id")
+  barrioId              String       @map("barrio_id")
+  lat                   Float
+  lng                   Float
+  estado                EstadoPedido @default(borrador)
+  publicadoEn           DateTime?    @map("publicado_en")
+  expiraEn              DateTime?    @map("expira_en")
+  cierreAutomaticoEn    DateTime?    @map("cierre_automatico_en")
+  desenlacePostergado   Boolean      @default(false) @map("desenlace_postergado")
+  desenlace             String?
+  motivoModeracion      String?      @map("motivo_moderacion")
+  vistas                Int          @default(0)
+  cantidadPostulaciones Int          @default(0) @map("cantidad_postulaciones")
+  cantidadContactos     Int          @default(0) @map("cantidad_contactos")
+  creadoEn              DateTime     @default(now()) @map("creado_en")
+
+  cliente   Usuario      @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  categoria Categoria    @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  direccion Direccion    @relation(fields: [direccionId], references: [id], onDelete: Restrict)
+  barrio    Barrio       @relation(fields: [barrioId], references: [id], onDelete: Restrict)
+  fotos     FotoPedido[]
+
+  @@index([clienteId])
+  @@index([estado])
+  @@index([clienteId, estado])
+  @@map("pedido")
+}
+
+model FotoPedido {
+  id       String   @id @default(uuid())
+  pedidoId String   @map("pedido_id")
+  url      String
+  orden    Int
+  subidaEn DateTime @default(now()) @map("subida_en")
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId])
+  @@map("foto_pedido")
+}
+
+// docs/dominio.md §10/§11: "todo evento con categoria, zona y rol". Sin
+// relaciones ni onDelete hacia Usuario/Pedido a proposito: es un registro de
+// analitica, tiene que sobrevivir aunque se borre la cuenta o el pedido (regla
+// de negocio #9: los datos se anonimizan, no se pierde la metrica). Por eso
+// mismo, `usuarioId` no se limpia solo: el slice de eliminacion de cuenta
+// tiene que ponerlo en NULL a mano (docs/dominio.md §13).
+model EventoAnalitico {
+  id        String   @id @default(uuid())
+  tipo      String
+  categoria String?
+  zona      String?
+  rol       String?
+  usuarioId String?  @map("usuario_id")
+  pedidoId  String?  @map("pedido_id")
+  metadata  Json?
+  creadoEn  DateTime @default(now()) @map("creado_en")
+
+  @@index([tipo])
+  @@map("evento_analitico")
 }
