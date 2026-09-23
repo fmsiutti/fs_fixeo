@@ -38,8 +38,10 @@ model Usuario {
   creadoEn     DateTime      @default(now()) @map("creado_en")
   ultimoAcceso DateTime?     @map("ultimo_acceso")
 
-  refreshTokens RefreshToken[]
-  pedidos       Pedido[]
+  refreshTokens     RefreshToken[]
+  pedidos           Pedido[]
+  perfilProfesional PerfilProfesional?
+  accesosDocumento  AccesoDocumento[]
 
   @@map("usuario")
 }
@@ -76,6 +78,7 @@ model Categoria {
   activa            Boolean            @default(true)
 
   pedidos Pedido[]
+  oficios OficioProfesional[]
 
   @@map("categoria")
 }
@@ -217,4 +220,151 @@ model EventoAnalitico {
 
   @@index([tipo])
   @@map("evento_analitico")
+}
+
+enum EstadoVerificacion {
+  pendiente
+  aprobada
+  rechazada
+
+  @@map("estado_verificacion")
+}
+
+enum EstadoMatricula {
+  no_requerida
+  pendiente
+  validada
+  rechazada
+  vencida
+
+  @@map("estado_matricula")
+}
+
+enum TipoZonaCobertura {
+  barrios
+  radio
+
+  @@map("tipo_zona_cobertura")
+}
+
+enum TipoVerificacion {
+  identidad
+  matricula
+
+  @@map("tipo_verificacion")
+}
+
+model PerfilProfesional {
+  id                 String             @id @default(uuid())
+  usuarioId          String             @unique @map("usuario_id")
+  presentacion       String?
+  aniosExperiencia   Int?               @map("anios_experiencia")
+  estadoVerificacion EstadoVerificacion @default(pendiente) @map("estado_verificacion")
+  verificadoEn       DateTime?          @map("verificado_en")
+  pausado            Boolean            @default(false)
+  tasaRespuesta      Float?             @map("tasa_respuesta")
+  promedioResenias   Float?             @map("promedio_resenias")
+  cantidadResenias   Int                @default(0) @map("cantidad_resenias")
+  trabajosCerrados   Int                @default(0) @map("trabajos_cerrados")
+  creadoEn           DateTime           @default(now()) @map("creado_en")
+
+  usuario        Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  oficios        OficioProfesional[]
+  zonaCobertura  ZonaCobertura?
+  verificaciones Verificacion[]
+
+  @@map("perfil_profesional")
+}
+
+model OficioProfesional {
+  id               String          @id @default(uuid())
+  perfilId         String          @map("perfil_id")
+  categoriaId      String          @map("categoria_id")
+  subcategorias    String[]        @default([])
+  matriculaNumero  String?         @map("matricula_numero")
+  matriculaEnte    String?         @map("matricula_ente")
+  matriculaEstado  EstadoMatricula @default(no_requerida) @map("matricula_estado")
+  matriculaVenceEn DateTime?       @map("matricula_vence_en")
+  creadoEn         DateTime        @default(now()) @map("creado_en")
+
+  perfil         PerfilProfesional @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  categoria      Categoria         @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  verificaciones Verificacion[]
+
+  @@unique([perfilId, categoriaId])
+  @@index([perfilId])
+  @@map("oficio_profesional")
+}
+
+model ZonaCobertura {
+  id            String            @id @default(uuid())
+  perfilId      String            @unique @map("perfil_id")
+  tipo          TipoZonaCobertura
+  barrioIds     String[]          @default([]) @map("barrio_ids")
+  centroLat     Float?            @map("centro_lat")
+  centroLng     Float?            @map("centro_lng")
+  radioKm       Float?            @map("radio_km")
+  actualizadoEn DateTime          @updatedAt @map("actualizado_en")
+
+  perfil PerfilProfesional @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+
+  @@map("zona_cobertura")
+}
+
+model Verificacion {
+  id            String             @id @default(uuid())
+  perfilId      String             @map("perfil_id")
+  tipo          TipoVerificacion
+  oficioId      String?            @map("oficio_id")
+  documentos    String[]
+  estado        EstadoVerificacion @default(pendiente)
+  revisadaPor   String?            @map("revisada_por")
+  motivoRechazo String?            @map("motivo_rechazo")
+  enviadaEn     DateTime           @default(now()) @map("enviada_en")
+  revisadaEn    DateTime?          @map("revisada_en")
+
+  perfil  PerfilProfesional  @relation(fields: [perfilId], references: [id], onDelete: Cascade)
+  oficio  OficioProfesional? @relation(fields: [oficioId], references: [id], onDelete: Restrict)
+  accesos AccesoDocumento[]
+
+  @@index([perfilId])
+  @@index([estado])
+  @@map("verificacion")
+}
+
+// Auditoria de accesos a documentos de verificacion (docs/dominio.md §13,
+// apps/api/CLAUDE.md "cada acceso se registra"). A diferencia de
+// EventoAnalitico, aca el moderador es un usuario autenticado real y el
+// registro tiene valor legal, asi que se agrega la FK a Usuario con
+// onDelete Restrict: no se puede borrar una cuenta de moderador mientras
+// tenga accesos auditados, y nunca se pierde el rastro de quien vio que.
+model AccesoDocumento {
+  id             String   @id @default(uuid())
+  verificacionId String   @map("verificacion_id")
+  moderadorId    String   @map("moderador_id")
+  accedidoEn     DateTime @default(now()) @map("accedido_en")
+
+  verificacion Verificacion @relation(fields: [verificacionId], references: [id], onDelete: Cascade)
+  moderador    Usuario      @relation(fields: [moderadorId], references: [id], onDelete: Restrict)
+
+  @@index([verificacionId])
+  @@map("acceso_documento")
+}
+
+// Sin FK a Usuario a proposito, mismo criterio que EventoAnalitico: la
+// tabla de notificaciones no debe depender de que la cuenta exista para
+// siempre (docs/dominio.md §13, anonimizacion al eliminar cuenta).
+model Notificacion {
+  id        String    @id @default(uuid())
+  usuarioId String    @map("usuario_id")
+  tipo      String
+  objetoId  String?   @map("objeto_id")
+  leidaEn   DateTime? @map("leida_en")
+  creadaEn  DateTime  @default(now()) @map("creada_en")
+
+  // apps/api/CLAUDE.md: "la deduplicacion de avisos usa una clave unica en
+  // notificacion (tipo + objeto_id + usuario_id)".
+  @@unique([usuarioId, tipo, objetoId])
+  @@index([usuarioId])
+  @@map("notificacion")
 }

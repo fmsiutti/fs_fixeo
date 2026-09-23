@@ -14,6 +14,10 @@ import { CatalogoModule } from "./modules/catalogo/catalogo.module.js";
 import { ArchivosModule } from "./modules/archivos/archivos.module.js";
 import { EventosModule } from "./modules/eventos/eventos.module.js";
 import { PedidosModule } from "./modules/pedidos/pedidos.module.js";
+import { ProfesionalesModule } from "./modules/profesionales/profesionales.module.js";
+import { NotificacionesModule } from "./modules/notificaciones/notificaciones.module.js";
+import { VerificacionesModule } from "./modules/verificaciones/verificaciones.module.js";
+import { AdminModule } from "./modules/admin/admin.module.js";
 
 @Module({
   imports: [
@@ -29,6 +33,10 @@ import { PedidosModule } from "./modules/pedidos/pedidos.module.js";
     ArchivosModule,
     EventosModule,
     PedidosModule,
+    ProfesionalesModule,
+    NotificacionesModule,
+    VerificacionesModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

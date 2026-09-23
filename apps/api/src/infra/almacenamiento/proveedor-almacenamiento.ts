@@ -16,6 +16,20 @@ export interface ProveedorAlmacenamiento {
   urlPara(key: string): string;
   /** Cuantos objetos hay bajo ese prefijo (para topar subidas por borradorId). */
   contar(prefijo: string): Promise<number>;
+  /**
+   * URL firmada de vida corta para un objeto privado (documentos de
+   * verificacion, CLAUDE.md "cada acceso se registra"). `ttlSegundos` lo
+   * decide quien llama, nunca el driver.
+   */
+  urlFirmada(key: string, ttlSegundos: number): Promise<string>;
 }
 
 export const PROVEEDOR_ALMACENAMIENTO = Symbol("PROVEEDOR_ALMACENAMIENTO");
+
+/**
+ * Segundo proveedor, apuntado a un bucket/carpeta distinto y privado: solo
+ * para documentos de verificacion (DNI, matricula). Nunca se comparte el
+ * bucket de fotos de pedido (publico) con estos documentos (CLAUDE.md §9,
+ * "documentos de verificacion cifrados, en bucket privado").
+ */
+export const PROVEEDOR_ALMACENAMIENTO_DOCUMENTOS = Symbol("PROVEEDOR_ALMACENAMIENTO_DOCUMENTOS");

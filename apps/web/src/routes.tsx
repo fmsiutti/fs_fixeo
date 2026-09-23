@@ -11,6 +11,10 @@ import { CuandoPage } from "./features/pedidos/pages/CuandoPage";
 import { RevisarPage } from "./features/pedidos/pages/RevisarPage";
 import { PedidoDetallePage } from "./features/pedidos/pages/PedidoDetallePage";
 import { EditarPedidoPage } from "./features/pedidos/pages/EditarPedidoPage";
+import { ArmarPerfilPage } from "./features/perfil/pages/ArmarPerfilPage";
+import { MiPerfilPage } from "./features/perfil/pages/MiPerfilPage";
+import { ColaVerificacionesPage } from "./features/admin/pages/ColaVerificacionesPage";
+import { RutaConRol } from "./components/RutaConRol";
 
 export const router = createBrowserRouter([
   {
@@ -60,5 +64,29 @@ export const router = createBrowserRouter([
   {
     path: "/pedidos/:id/editar",
     element: <EditarPedidoPage />,
+  },
+  {
+    path: "/perfil/armar",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <ArmarPerfilPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/perfil",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <MiPerfilPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/admin/verificaciones",
+    element: (
+      <RutaConRol roles={["moderador", "soporte"]}>
+        <ColaVerificacionesPage />
+      </RutaConRol>
+    ),
   },
 ]);

@@ -6,3 +6,4 @@ export * from "./catalogo.js";
 export * from "./deteccion-contacto.js";
 export * from "./pedidos.js";
 export * from "./eventos.js";
+export * from "./profesionales.js";

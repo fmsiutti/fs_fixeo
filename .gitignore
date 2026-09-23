@@ -16,6 +16,7 @@ apps/api/src/generated/
 
 # storage local del driver "log" de almacenamiento (solo desarrollo)
 apps/api/uploads-dev/
+apps/api/uploads-dev-privado/
 
 # editores / SO
 .DS_Store

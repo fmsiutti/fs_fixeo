@@ -177,6 +177,7 @@ const parametros: { clave: string; valor: number | string }[] = [
   { clave: "descripcion_min", valor: 20 },
   { clave: "descripcion_max", valor: 1000 },
   { clave: "fotos_max", valor: 6 },
+  { clave: "documentos_verificacion_max", valor: 5 },
   { clave: "limite_diario_zona_horaria", valor: "America/Argentina/Buenos_Aires" },
 ];
 
