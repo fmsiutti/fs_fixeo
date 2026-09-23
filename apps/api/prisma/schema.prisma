@@ -56,3 +56,39 @@ model RefreshToken {
   @@index([usuarioId])
   @@map("refresh_token")
 }
+
+enum ExigenciaMatricula {
+  obligatoria
+  recomendada
+  no_exigida
+
+  @@map("exigencia_matricula")
+}
+
+model Categoria {
+  id                String             @id @default(uuid())
+  nombre            String
+  slug              String             @unique
+  subcategorias     String[]
+  preguntasGuia     String[]           @default([]) @map("preguntas_guia")
+  requiereMatricula ExigenciaMatricula @map("requiere_matricula")
+  activa            Boolean            @default(true)
+
+  @@map("categoria")
+}
+
+model Barrio {
+  id     String  @id @default(uuid())
+  nombre String  @unique
+  activo Boolean @default(false)
+
+  @@map("barrio")
+}
+
+model ParametroNegocio {
+  id    String @id @default(uuid())
+  clave String @unique
+  valor Json
+
+  @@map("parametro_negocio")
+}

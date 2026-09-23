@@ -31,7 +31,7 @@ Módulos: `auth`, `usuarios`, `catalogo` (categorías, subcategorías, barrios),
 - Cambios de estado solo vía `transicionar()` del módulo, dentro de `prisma.$transaction`. La transición valida el estado de origen y lanza `ConflictException` con código estable.
 - Errores de negocio: excepciones de Nest con `code` estable definido en `packages/shared` (`POSTULACION_CUPO_LLENO`, `PROFESIONAL_SIN_VERIFICAR`, ...). El front decide el texto.
 - **Concurrencia**: cupo de 8 postulaciones, límite diario, máximo de elegidos y pedidos activos se chequean dentro de la transacción con `SELECT ... FOR UPDATE` sobre el pedido (o el usuario) vía `$queryRaw`. Cada uno con un test de carrera.
-- Parámetros de negocio: `ParametrosService.get('postulaciones_max_por_pedido')`. Cache en memoria de 60 s como máximo.
+- Parámetros de negocio: `ParametrosService.getNumero('postulaciones_max_por_pedido')` / `.getTexto(...)` (valida el tipo real del valor, nunca un cast ciego). Cache en memoria de 60 s como máximo.
 - Dinero: pesos enteros (`Int`), nunca float. Fechas en UTC; las reglas de «día» (límite diario) usan `America/Argentina/Buenos_Aires`. Teléfonos en E.164.
 - Listados paginados por cursor. Nunca devolver colecciones sin límite.
 - Logs con el `Logger` de Nest, sin PII. Nada de `console.log`.

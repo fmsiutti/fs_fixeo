@@ -10,6 +10,7 @@ import { PrismaModule } from "./infra/prisma/prisma.module.js";
 import { ParametrosModule } from "./modules/parametros/parametros.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { UsuariosModule } from "./modules/usuarios/usuarios.module.js";
+import { CatalogoModule } from "./modules/catalogo/catalogo.module.js";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UsuariosModule } from "./modules/usuarios/usuarios.module.js";
     ParametrosModule,
     AuthModule,
     UsuariosModule,
+    CatalogoModule,
   ],
   controllers: [AppController],
   providers: [

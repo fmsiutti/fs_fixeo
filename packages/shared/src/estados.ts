@@ -40,3 +40,9 @@ export const ESTADOS_USUARIO = ["activo", "suspendido", "eliminado"] as const;
 export const estadoUsuarioSchema = z.enum(ESTADOS_USUARIO);
 
 export type EstadoUsuario = z.infer<typeof estadoUsuarioSchema>;
+
+export const EXIGENCIAS_MATRICULA = ["obligatoria", "recomendada", "no_exigida"] as const;
+
+export const exigenciaMatriculaSchema = z.enum(EXIGENCIAS_MATRICULA);
+
+export type ExigenciaMatricula = z.infer<typeof exigenciaMatriculaSchema>;
