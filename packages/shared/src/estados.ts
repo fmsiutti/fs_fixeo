@@ -28,3 +28,15 @@ export const ESTADOS_POSTULACION = [
 export const estadoPostulacionSchema = z.enum(ESTADOS_POSTULACION);
 
 export type EstadoPostulacion = z.infer<typeof estadoPostulacionSchema>;
+
+export const ROLES_USUARIO = ["cliente", "profesional", "moderador", "soporte"] as const;
+
+export const rolUsuarioSchema = z.enum(ROLES_USUARIO);
+
+export type RolUsuario = z.infer<typeof rolUsuarioSchema>;
+
+export const ESTADOS_USUARIO = ["activo", "suspendido", "eliminado"] as const;
+
+export const estadoUsuarioSchema = z.enum(ESTADOS_USUARIO);
+
+export type EstadoUsuario = z.infer<typeof estadoUsuarioSchema>;

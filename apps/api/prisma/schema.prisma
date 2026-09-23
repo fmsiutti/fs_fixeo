@@ -8,3 +8,51 @@ datasource db {
   provider   = "postgresql"
   extensions = [postgis]
 }
+
+enum RolUsuario {
+  cliente
+  profesional
+  moderador
+  soporte
+
+  @@map("rol_usuario")
+}
+
+enum EstadoUsuario {
+  activo
+  suspendido
+  eliminado
+
+  @@map("estado_usuario")
+}
+
+model Usuario {
+  id           String        @id @default(uuid())
+  telefono     String        @unique
+  nombre       String?
+  apellido     String?
+  email        String?
+  fotoUrl      String?       @map("foto_url")
+  rolActivo    RolUsuario?   @map("rol_activo")
+  estado       EstadoUsuario @default(activo)
+  creadoEn     DateTime      @default(now()) @map("creado_en")
+  ultimoAcceso DateTime?     @map("ultimo_acceso")
+
+  refreshTokens RefreshToken[]
+
+  @@map("usuario")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  usuarioId  String    @map("usuario_id")
+  tokenHash  String    @unique @map("token_hash")
+  creadoEn   DateTime  @default(now()) @map("creado_en")
+  expiraEn   DateTime  @map("expira_en")
+  revocadoEn DateTime? @map("revocado_en")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("refresh_token")
+}

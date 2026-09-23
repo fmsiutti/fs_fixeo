@@ -8,8 +8,10 @@ export const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerida"),
   REDIS_URL: optionalString(),
-  JWT_ACCESS_SECRET: optionalString(),
-  JWT_REFRESH_SECRET: optionalString(),
+  // Origen de apps/web para CORS. En desarrollo, el puerto por default de `vite`.
+  CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
+  JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET es requerida"),
+  TWILIO_DRIVER: z.enum(["log", "twilio"]).default("log"),
   TWILIO_ACCOUNT_SID: optionalString(),
   TWILIO_AUTH_TOKEN: optionalString(),
   TWILIO_VERIFY_SERVICE_SID: optionalString(),

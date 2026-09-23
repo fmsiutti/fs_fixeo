@@ -8,6 +8,11 @@ export const CODIGOS_ERROR = [
   "conflicto",
   "limite_excedido",
   "error_interno",
+  "otp_invalido",
+  "otp_expirado",
+  "telefono_invalido",
+  "refresh_invalido",
+  "cuenta_suspendida",
 ] as const;
 
 export const codigoErrorSchema = z.enum(CODIGOS_ERROR);
