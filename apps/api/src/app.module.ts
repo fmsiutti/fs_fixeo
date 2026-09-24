@@ -20,6 +20,7 @@ import { ProfesionalesModule } from "./modules/profesionales/profesionales.modul
 import { NotificacionesModule } from "./modules/notificaciones/notificaciones.module.js";
 import { VerificacionesModule } from "./modules/verificaciones/verificaciones.module.js";
 import { DenunciasModule } from "./modules/denuncias/denuncias.module.js";
+import { ReseniasModule } from "./modules/resenias/resenias.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 
@@ -43,6 +44,7 @@ import { JobsModule } from "./jobs/jobs.module.js";
     NotificacionesModule,
     VerificacionesModule,
     DenunciasModule,
+    ReseniasModule,
     AdminModule,
     JobsModule,
   ],

@@ -14,9 +14,11 @@ import { RolesGuard } from "../../common/guards/roles.guard.js";
 import type { Usuario } from "../../generated/prisma/client.js";
 import { ContactosService } from "../contactos/contactos.service.js";
 import { PostulacionesService } from "../postulaciones/postulaciones.service.js";
+import { CerrarPedidoDto } from "./dto/cerrar-pedido.dto.js";
 import { CrearPedidoDto } from "./dto/crear-pedido.dto.js";
 import { EditarPedidoDto } from "./dto/editar-pedido.dto.js";
 import { PedidoFeedQueryDto } from "./dto/pedido-feed-query.dto.js";
+import { PedidosCierreService } from "./pedidos-cierre.service.js";
 import { PedidosFeedService } from "./pedidos-feed.service.js";
 import { PedidosService } from "./pedidos.service.js";
 
@@ -26,6 +28,7 @@ export class PedidosController {
   constructor(
     private readonly pedidosService: PedidosService,
     private readonly pedidosFeedService: PedidosFeedService,
+    private readonly pedidosCierreService: PedidosCierreService,
     private readonly postulacionesService: PostulacionesService,
     private readonly contactosService: ContactosService,
   ) {}
@@ -70,6 +73,16 @@ export class PedidosController {
   @Patch(":id/cancelar")
   cancelar(@UsuarioActual() usuario: Usuario, @Param("id") id: string): Promise<PedidoVista> {
     return this.pedidosService.cancelar(usuario.id, id);
+  }
+
+  // CL-11.
+  @Patch(":id/cerrar")
+  cerrar(
+    @UsuarioActual() usuario: Usuario,
+    @Param("id") id: string,
+    @Body() dto: CerrarPedidoDto,
+  ): Promise<PedidoVista> {
+    return this.pedidosCierreService.cerrar(usuario.id, id, dto);
   }
 
   // CL-08.

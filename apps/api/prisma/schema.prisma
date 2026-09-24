@@ -43,6 +43,7 @@ model Usuario {
   perfilProfesional PerfilProfesional?
   accesosDocumento  AccesoDocumento[]
   denuncias         Denuncia[]
+  reseniasEscritas  Resenia[]
 
   @@map("usuario")
 }
@@ -152,6 +153,19 @@ enum Urgencia {
   @@map("urgencia")
 }
 
+// docs/dominio.md §7.5/§12 D4: las 4 opciones fijas de CL-11 (ficha de
+// cierre). Antes era String? libre porque el documento original no lo
+// modelaba; ahora que CL-11 lo implementa, es vocabulario controlado como
+// el resto de los enums del dominio.
+enum Desenlace {
+  lo_hizo_este_profesional
+  lo_hizo_otro
+  ya_no_lo_necesito
+  todavia_no_lo_resolvi
+
+  @@map("desenlace")
+}
+
 model Pedido {
   id                    String       @id @default(uuid())
   clienteId             String       @map("cliente_id")
@@ -170,7 +184,7 @@ model Pedido {
   expiraEn              DateTime?    @map("expira_en")
   cierreAutomaticoEn    DateTime?    @map("cierre_automatico_en")
   desenlacePostergado   Boolean      @default(false) @map("desenlace_postergado")
-  desenlace             String?
+  desenlace             Desenlace?
   motivoModeracion      String?      @map("motivo_moderacion")
   vistas                Int          @default(0)
   cantidadPostulaciones Int          @default(0) @map("cantidad_postulaciones")
@@ -184,6 +198,7 @@ model Pedido {
   fotos         FotoPedido[]
   postulaciones Postulacion[]
   contactos     Contacto[]
+  resenias      Resenia[]
 
   @@index([clienteId])
   @@index([estado])
@@ -277,6 +292,7 @@ model PerfilProfesional {
   verificaciones    Verificacion[]
   postulaciones     Postulacion[]
   plantillasMensaje PlantillaMensaje[]
+  resenias          Resenia[]
 
   // docs/dominio.md §6: un profesional entra al matching y al feed solo si
   // "su verificacion esta aprobada y su perfil no esta pausado". Ambos
@@ -494,10 +510,43 @@ model Contacto {
 
   pedido      Pedido      @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   postulacion Postulacion @relation(fields: [postulacionId], references: [id], onDelete: Restrict)
+  resenia     Resenia?
 
   @@unique([pedidoId, orden])
   @@index([pedidoId])
   @@map("contacto")
+}
+
+// docs/dominio.md §8/§11: una resenia por contacto (contactoId es unico),
+// del cliente cuyo pedido llego a contacto_habilitado, del profesional que
+// declaro que hizo el trabajo. onDelete Restrict hacia Contacto, Perfil
+// Profesional y Usuario con el mismo criterio que Contacto -> Postulacion y
+// AccesoDocumento.moderadorId: son registros con valor de auditoria/negocio
+// (una resenia negativa no se borra a pedido del profesional, docs/dominio.md
+// §8) que no pueden desaparecer en cascada al borrar el contacto, el perfil o
+// la cuenta. onDelete Cascade hacia Pedido, mismo criterio que FotoPedido: la
+// resenia no tiene sentido sin el pedido que la origino.
+model Resenia {
+  id                   String   @id @default(uuid())
+  pedidoId             String   @map("pedido_id")
+  contactoId           String   @unique @map("contacto_id")
+  profesionalId        String   @map("profesional_id")
+  clienteId            String   @map("cliente_id")
+  puntaje              Int
+  atributos            String[] @default([])
+  comentario           String?
+  montoDeclarado       Int?     @map("monto_declarado")
+  respuestaProfesional String?  @map("respuesta_profesional")
+  publicadaEn          DateTime @default(now()) @map("publicada_en")
+
+  pedido      Pedido            @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  contacto    Contacto          @relation(fields: [contactoId], references: [id], onDelete: Restrict)
+  profesional PerfilProfesional @relation(fields: [profesionalId], references: [id], onDelete: Restrict)
+  cliente     Usuario           @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  @@index([profesionalId])
+  @@index([pedidoId])
+  @@map("resenia")
 }
 
 model PlantillaMensaje {

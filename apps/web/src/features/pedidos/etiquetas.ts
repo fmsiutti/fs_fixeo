@@ -1,4 +1,10 @@
-import { type EstadoPedido, type Franja, type TipoPropiedad, type Urgencia } from "@fixeo/shared";
+import {
+  type Desenlace,
+  type EstadoPedido,
+  type Franja,
+  type TipoPropiedad,
+  type Urgencia,
+} from "@fixeo/shared";
 
 export const ETIQUETAS_FRANJA: Record<Franja, string> = {
   manana: "Mañana",
@@ -28,6 +34,14 @@ export const ETIQUETAS_ESTADO_PEDIDO: Record<EstadoPedido, string> = {
   expirado: "Expirado",
   cancelado: "Cancelado",
   bloqueado: "Bloqueado",
+};
+
+// CL-11 (docs/dominio.md §3/§12 D4): vocabulario exacto de las 4 opciones de desenlace.
+export const ETIQUETAS_DESENLACE: Record<Desenlace, string> = {
+  lo_hizo_este_profesional: "Lo hizo este profesional",
+  lo_hizo_otro: "Lo hizo otro",
+  ya_no_lo_necesito: "Ya no lo necesito",
+  todavia_no_lo_resolvi: "Todavía no lo resolví",
 };
 
 // Centro aproximado de CABA (Obelisco): fallback cuando el usuario no comparte

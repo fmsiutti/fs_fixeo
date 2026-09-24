@@ -124,3 +124,17 @@ export const ESTADOS_DENUNCIA = ["pendiente", "resuelta", "descartada"] as const
 export const estadoDenunciaSchema = z.enum(ESTADOS_DENUNCIA);
 
 export type EstadoDenuncia = z.infer<typeof estadoDenunciaSchema>;
+
+// Las 4 opciones fijas de CL-11 (docs/dominio.md §3/§12 D4) que el cliente
+// declara al cerrar un pedido. "todavia_no_lo_resolvi" no cierra el pedido
+// (posterga cierre_automatico_en una sola vez); las otras tres si.
+export const DESENLACES = [
+  "lo_hizo_este_profesional",
+  "lo_hizo_otro",
+  "ya_no_lo_necesito",
+  "todavia_no_lo_resolvi",
+] as const;
+
+export const desenlaceSchema = z.enum(DESENLACES);
+
+export type Desenlace = z.infer<typeof desenlaceSchema>;

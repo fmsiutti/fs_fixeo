@@ -1,7 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import type { PerfilProfesionalVistaPropia } from "@fixeo/shared";
 import { obtenerPerfilProfesional, pausarPerfil, perfilProfesionalQueryKey } from "../api";
+import { misReseniasQueryKey, obtenerMisResenias } from "../../resenias/api";
+import { TarjetaResenia } from "../../resenias/components/TarjetaResenia";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
@@ -47,6 +49,15 @@ export function MiPerfilPage() {
       queryClient.setQueryData(perfilProfesionalQueryKey, perfilActualizado);
     },
   });
+
+  // PR-07: reseñas recibidas, con opcion de responder una vez cada una.
+  const reseniasQuery = useInfiniteQuery({
+    queryKey: misReseniasQueryKey,
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) => obtenerMisResenias(pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (ultimaPagina) => ultimaPagina.cursor ?? undefined,
+  });
+  const resenias = reseniasQuery.data?.pages.flatMap((pagina) => pagina.items) ?? [];
 
   if (perfilQuery.isPending) {
     return (
@@ -195,6 +206,50 @@ export function MiPerfilPage() {
           <p className="text-lg font-bold text-slate-900">{perfil.trabajosCerrados}</p>
           <p className="text-xs text-slate-500">Trabajos cerrados</p>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4">
+        <h2 className="font-semibold text-slate-900">Reseñas recibidas</h2>
+
+        {perfil.cantidadResenias === 0 ? (
+          <p className="text-sm text-slate-500">Todavía no tenés reseñas.</p>
+        ) : (
+          <>
+            {reseniasQuery.isPending && <Spinner etiqueta="Cargando tus reseñas" />}
+
+            {reseniasQuery.isError && (
+              <div className="flex flex-col items-start gap-2 text-sm text-red-700">
+                <p role="alert">No pudimos cargar tus reseñas.</p>
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold underline"
+                  onClick={() => reseniasQuery.refetch()}
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {resenias.length > 0 && (
+              <ul className="flex flex-col gap-3">
+                {resenias.map((resenia) => (
+                  <TarjetaResenia key={resenia.id} resenia={resenia} puedeResponder />
+                ))}
+              </ul>
+            )}
+
+            {reseniasQuery.hasNextPage && (
+              <Button
+                type="button"
+                variante="secundario"
+                cargando={reseniasQuery.isFetchingNextPage}
+                onClick={() => reseniasQuery.fetchNextPage()}
+              >
+                Ver más reseñas
+              </Button>
+            )}
+          </>
+        )}
       </section>
 
       <section className="flex flex-col gap-2">

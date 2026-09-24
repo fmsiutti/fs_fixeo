@@ -21,3 +21,24 @@ export const OPCIONES_JOB_POR_DEFECTO = {
   removeOnComplete: { count: 1000 },
   removeOnFail: { count: 5000 },
 };
+
+// Slice 8 (docs/dominio.md §9, apps/api/CLAUDE.md "Jobs"): un solo barrido
+// periodico que consulta la base, en vez de un job diferido por pedido
+// (patron distinto al de aviso-matching, que si es puntual por pedido). Una
+// sola cola con 6 jobs nombrados (BullMQ los distingue por `job.name`): no
+// hay ninguno con SLA distinto que justifique una cola aparte.
+export const COLA_BARRIDOS_PEDIDOS = "barridos-pedidos";
+
+export const NOMBRES_BARRIDO_PEDIDOS = [
+  "expiracion",
+  "aviso-expiracion",
+  "aviso-sin-postulaciones",
+  "consulta-contacto",
+  "consulta-desenlace",
+  "cierre-automatico",
+] as const;
+
+export type NombreBarridoPedidos = (typeof NOMBRES_BARRIDO_PEDIDOS)[number];
+
+// Cada 15 minutos: ninguno de los 6 barridos tiene un SLA mas ajustado.
+export const PATRON_BARRIDOS_PEDIDOS = "*/15 * * * *";

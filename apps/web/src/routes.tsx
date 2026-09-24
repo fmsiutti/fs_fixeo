@@ -12,6 +12,7 @@ import { RevisarPage } from "./features/pedidos/pages/RevisarPage";
 import { PedidoDetallePage } from "./features/pedidos/pages/PedidoDetallePage";
 import { EditarPedidoPage } from "./features/pedidos/pages/EditarPedidoPage";
 import { ContactoPedidoPage } from "./features/pedidos/pages/ContactoPedidoPage";
+import { CerrarPedidoPage } from "./features/pedidos/pages/CerrarPedidoPage";
 import { ArmarPerfilPage } from "./features/perfil/pages/ArmarPerfilPage";
 import { MiPerfilPage } from "./features/perfil/pages/MiPerfilPage";
 import { ColaVerificacionesPage } from "./features/admin/pages/ColaVerificacionesPage";
@@ -76,6 +77,10 @@ export const router = createBrowserRouter([
   {
     path: "/pedidos/:id/contacto",
     element: <ContactoPedidoPage />,
+  },
+  {
+    path: "/pedidos/:id/cerrar",
+    element: <CerrarPedidoPage />,
   },
   {
     path: "/perfil/armar",

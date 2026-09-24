@@ -9,6 +9,7 @@ import { SesionContext, type SesionContextValor } from "../../auth/SesionContext
 import * as api from "../api";
 import * as pedidosApi from "../../pedidos/api";
 import * as feedApi from "../../feed/api";
+import * as reseniasApi from "../../resenias/api";
 
 const PERFIL_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -90,6 +91,10 @@ describe("PerfilProfesionalPublicoPage", () => {
     vi.spyOn(pedidosApi, "obtenerBarrios").mockResolvedValue([
       { id: "barrio-1", nombre: "Palermo" } as BarrioVista,
     ]);
+    vi.spyOn(reseniasApi, "obtenerReseniasDeProfesional").mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     renderPage();
 
     expect(await screen.findByText(/nuevo en fixeo/i)).toBeInTheDocument();
@@ -103,6 +108,10 @@ describe("PerfilProfesionalPublicoPage", () => {
     vi.spyOn(pedidosApi, "obtenerBarrios").mockResolvedValue([
       { id: "barrio-1", nombre: "Palermo" } as BarrioVista,
     ]);
+    vi.spyOn(reseniasApi, "obtenerReseniasDeProfesional").mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     renderPage();
 
     expect(await screen.findByText(/4\.5/)).toBeInTheDocument();
@@ -114,6 +123,10 @@ describe("PerfilProfesionalPublicoPage", () => {
     vi.spyOn(pedidosApi, "obtenerBarrios").mockResolvedValue([
       { id: "barrio-1", nombre: "Palermo" } as BarrioVista,
     ]);
+    vi.spyOn(reseniasApi, "obtenerReseniasDeProfesional").mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     renderPage();
 
     expect(await screen.findByText(/identidad verificada/i)).toBeInTheDocument();
@@ -126,6 +139,10 @@ describe("PerfilProfesionalPublicoPage", () => {
       { id: "barrio-1", nombre: "Palermo" } as BarrioVista,
       { id: "barrio-2", nombre: "Belgrano" } as BarrioVista,
     ]);
+    vi.spyOn(reseniasApi, "obtenerReseniasDeProfesional").mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     renderPage();
 
     expect(await screen.findByText("Palermo")).toBeInTheDocument();
@@ -135,6 +152,10 @@ describe("PerfilProfesionalPublicoPage", () => {
   it("permite denunciar el perfil", async () => {
     vi.spyOn(api, "obtenerPerfilProfesionalPublico").mockResolvedValue(perfilDeEjemplo());
     vi.spyOn(pedidosApi, "obtenerBarrios").mockResolvedValue([]);
+    vi.spyOn(reseniasApi, "obtenerReseniasDeProfesional").mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     const denuncia = vi.spyOn(feedApi, "crearDenuncia").mockResolvedValue({ id: "denuncia-1" });
     const usuario = userEvent.setup();
     renderPage();

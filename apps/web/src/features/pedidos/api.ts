@@ -1,6 +1,7 @@
 import type {
   BarrioVista,
   CategoriaVista,
+  CerrarPedido,
   ContactoVistaCliente,
   CrearPedido,
   EditarPedido,
@@ -51,6 +52,17 @@ export function editarPedido(id: string, input: EditarPedido): Promise<PedidoVis
   return fetchJson<PedidoVista>(`/pedidos/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
+  });
+}
+
+// CL-11: declara el desenlace y, si "lo hizo este profesional", opcionalmente
+// la reseña. "todavia_no_lo_resolvi" no cierra el pedido (D4): el back
+// devuelve el mismo PedidoVista, todavia en contacto_habilitado, con
+// desenlacePostergado en true.
+export function cerrarPedido(id: string, datos: CerrarPedido): Promise<PedidoVista> {
+  return fetchJson<PedidoVista>(`/pedidos/${id}/cerrar`, {
+    method: "PATCH",
+    body: JSON.stringify(datos),
   });
 }
 

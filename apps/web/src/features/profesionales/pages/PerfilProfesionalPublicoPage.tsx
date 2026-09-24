@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { obtenerPerfilProfesionalPublico, perfilProfesionalPublicoQueryKey } from "../api";
 import { barriosQueryKey, obtenerBarrios } from "../../pedidos/api";
 import { FormularioDenuncia } from "../../feed/components/FormularioDenuncia";
+import { obtenerReseniasDeProfesional, reseniasDeProfesionalQueryKey } from "../../resenias/api";
+import { DistribucionPuntajes } from "../../resenias/components/DistribucionPuntajes";
+import { TarjetaResenia } from "../../resenias/components/TarjetaResenia";
 import { ETIQUETAS_ESTADO_MATRICULA, TONOS_ESTADO_MATRICULA } from "../../perfil/etiquetas";
 import { useSesion } from "../../auth/useSesion";
 import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
 import { ErrorApiHttp, urlCompletaApi } from "../../../lib/http";
 
-/**
- * CL-09 · Perfil del profesional (vista publica). Sin galeria ni distribucion
- * de reseñas por puntaje: no hay tabla de fotos de trabajo ni Resenia
- * modelada todavia (slice 8) — se muestra lo que el contrato trae.
- */
+/** CL-09 · Perfil del profesional (vista publica). */
 export function PerfilProfesionalPublicoPage() {
   const { id } = useParams<{ id: string }>();
   const { usuario } = useSesion();
@@ -37,6 +37,16 @@ export function PerfilProfesionalPublicoPage() {
     enabled: zona?.tipo === "barrios",
     staleTime: Infinity,
   });
+
+  const reseniasQuery = useInfiniteQuery({
+    queryKey: reseniasDeProfesionalQueryKey(id ?? ""),
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
+      obtenerReseniasDeProfesional(id ?? "", pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (ultimaPagina) => ultimaPagina.cursor ?? undefined,
+    enabled: Boolean(usuario) && Boolean(id),
+  });
+  const resenias = reseniasQuery.data?.pages.flatMap((pagina) => pagina.items) ?? [];
 
   if (!usuario) {
     return <Navigate to="/ingresar" replace />;
@@ -177,6 +187,54 @@ export function PerfilProfesionalPublicoPage() {
                       .map((barrio) => barrio.nombre)
                       .join(", ") || "Sin barrios activos configurados"}
                   </p>
+                )}
+              </>
+            )}
+          </section>
+
+          <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4">
+            <h3 className="font-semibold text-slate-900">Reseñas</h3>
+
+            {perfil.cantidadResenias === 0 ? (
+              // "Nuevo en Fixeo" ya se muestra arriba (docs/dominio.md §8): no
+              // se repite el mismo texto para no duplicarlo en la pantalla.
+              <p className="text-sm text-slate-500">Todavía no tiene reseñas.</p>
+            ) : (
+              <>
+                <DistribucionPuntajes resenias={resenias} />
+
+                {reseniasQuery.isPending && <Spinner etiqueta="Cargando las reseñas" />}
+
+                {reseniasQuery.isError && (
+                  <div className="flex flex-col items-start gap-2 text-sm text-red-700">
+                    <p role="alert">No pudimos cargar las reseñas.</p>
+                    <button
+                      type="button"
+                      className="min-h-11 font-semibold underline"
+                      onClick={() => reseniasQuery.refetch()}
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                )}
+
+                {resenias.length > 0 && (
+                  <ul className="flex flex-col gap-3">
+                    {resenias.map((resenia) => (
+                      <TarjetaResenia key={resenia.id} resenia={resenia} />
+                    ))}
+                  </ul>
+                )}
+
+                {reseniasQuery.hasNextPage && (
+                  <Button
+                    type="button"
+                    variante="secundario"
+                    cargando={reseniasQuery.isFetchingNextPage}
+                    onClick={() => reseniasQuery.fetchNextPage()}
+                  >
+                    Ver más reseñas
+                  </Button>
                 )}
               </>
             )}

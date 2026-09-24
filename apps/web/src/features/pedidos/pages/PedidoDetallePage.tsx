@@ -9,7 +9,12 @@ import {
 import { TarjetaPostulacionCliente } from "../../postulaciones/components/TarjetaPostulacionCliente";
 import { pluralizarLugares } from "../../feed/lib/formato";
 import { cancelarPedido, misPedidosQueryKey, obtenerPedido, pedidoQueryKey } from "../api";
-import { ETIQUETAS_ESTADO_PEDIDO, ETIQUETAS_FRANJA, ETIQUETAS_URGENCIA } from "../etiquetas";
+import {
+  ETIQUETAS_DESENLACE,
+  ETIQUETAS_ESTADO_PEDIDO,
+  ETIQUETAS_FRANJA,
+  ETIQUETAS_URGENCIA,
+} from "../etiquetas";
 import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
 import { ErrorApiHttp, urlCompletaApi } from "../../../lib/http";
@@ -347,11 +352,27 @@ export function PedidoDetallePage() {
             </section>
           )}
 
-          {!ESTADOS_CANCELABLES.includes(pedido.estado) && pedido.estado !== "cancelado" && (
+          {/* CL-11: el desenlace que declaro el cliente (o el cierre automatico) al cerrar.
+              Si `desenlace` es null lo cerro el job automatico (D5, docs/dominio.md §12), no el
+              cliente: no le atribuimos la accion con "Cerraste este pedido". */}
+          {pedido.estado === "cerrado" && (
             <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700">
-              <p className="font-semibold">Estado: {ETIQUETAS_ESTADO_PEDIDO[pedido.estado]}</p>
+              <p className="font-semibold">
+                {pedido.desenlace !== null ? "Cerraste este pedido." : "Este pedido está cerrado."}
+              </p>
+              {pedido.desenlace && (
+                <p className="text-sm">Desenlace: {ETIQUETAS_DESENLACE[pedido.desenlace]}</p>
+              )}
             </section>
           )}
+
+          {!ESTADOS_CANCELABLES.includes(pedido.estado) &&
+            pedido.estado !== "cancelado" &&
+            pedido.estado !== "cerrado" && (
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700">
+                <p className="font-semibold">Estado: {ETIQUETAS_ESTADO_PEDIDO[pedido.estado]}</p>
+              </section>
+            )}
         </>
       )}
     </main>

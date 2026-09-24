@@ -11,6 +11,7 @@ import { EventosModule } from "../eventos/eventos.module.js";
 import { ParametrosModule } from "../parametros/parametros.module.js";
 import { PostulacionesModule } from "../postulaciones/postulaciones.module.js";
 import { PedidosController } from "./pedidos.controller.js";
+import { PedidosCierreService } from "./pedidos-cierre.service.js";
 import { PedidosFeedService } from "./pedidos-feed.service.js";
 import { MatchingService } from "./pedidos-matching.service.js";
 import { PedidosService } from "./pedidos.service.js";
@@ -31,7 +32,7 @@ import { PedidosService } from "./pedidos.service.js";
     }),
   ],
   controllers: [PedidosController],
-  providers: [PedidosService, PedidosFeedService, MatchingService],
+  providers: [PedidosService, PedidosFeedService, PedidosCierreService, MatchingService],
   // MatchingService lo usa AvisoMatchingProcessor (JobsModule).
   exports: [MatchingService],
 })

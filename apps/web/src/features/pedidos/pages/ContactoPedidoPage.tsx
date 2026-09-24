@@ -260,6 +260,15 @@ export function ContactoPedidoPage() {
             </ul>
           </section>
 
+          {/* CL-10: "a las 48h sin respuesta... ofrecer cerrar y republicar" (D3). Este
+              slice no agrega el gating por horas: un link simple a CL-11 alcanza. */}
+          <Link
+            to={`/pedidos/${id}/cerrar`}
+            className="flex min-h-11 items-center justify-center rounded-full border border-teal-700 px-4 text-sm font-semibold text-teal-800 hover:bg-teal-50"
+          >
+            Cerrar pedido
+          </Link>
+
           {pedido && pedido.seleccionablesLibres > 0 && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               {(() => {

@@ -1,10 +1,12 @@
 import { z } from "zod";
 import {
+  desenlaceSchema,
   estadoPedidoSchema,
   franjaSchema,
   tipoPropiedadSchema,
   urgenciaSchema,
 } from "./estados.js";
+import { reseniaAlCerrarSchema } from "./resenias.js";
 
 // Limites basicos para UX del front (feedback inmediato en el formulario,
 // coinciden con los valores sembrados de descripcion_min/max y fotos_max).
@@ -93,6 +95,47 @@ export const editarPedidoSchema = z.object({
 
 export type EditarPedido = z.infer<typeof editarPedidoSchema>;
 
+// CL-11: el cliente declara el desenlace al cerrar el pedido.
+// `contactoId` solo existe (y es obligatorio) cuando "lo hizo este
+// profesional"; `resenia` solo se puede mandar en ese mismo caso, y siempre
+// es opcional ("se puede omitir", docs/pantallas.md CL-11).
+// "todavia_no_lo_resolvi" (D4, docs/dominio.md §12) no cierra el pedido: lo
+// resuelve PedidosService con un camino aparte, sin contactoId ni resenia.
+export const cerrarPedidoSchema = z
+  .object({
+    desenlace: desenlaceSchema,
+    contactoId: z.string().uuid().optional(),
+    resenia: reseniaAlCerrarSchema.optional(),
+  })
+  .superRefine((datos, ctx) => {
+    if (datos.desenlace === "lo_hizo_este_profesional") {
+      if (!datos.contactoId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Falta indicar cuál de los elegidos hizo el trabajo",
+          path: ["contactoId"],
+        });
+      }
+      return;
+    }
+    if (datos.contactoId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'contactoId solo aplica cuando el desenlace es "lo hizo este profesional"',
+        path: ["contactoId"],
+      });
+    }
+    if (datos.resenia) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Solo se puede reseñar cuando el desenlace es "lo hizo este profesional"',
+        path: ["resenia"],
+      });
+    }
+  });
+
+export type CerrarPedido = z.infer<typeof cerrarPedidoSchema>;
+
 // Un solo schema para los dos endpoints de fotos del asistente (CL-03): tanto
 // subir como borrar solo necesitan el borradorId que genera el cliente, sin
 // autenticacion (suben antes de que exista pedido o cuenta).
@@ -133,6 +176,13 @@ export const pedidoVistaSchema = z.object({
   estado: estadoPedidoSchema,
   publicadoEn: z.string().nullable(),
   expiraEn: z.string().nullable(),
+  // CL-11: fecha limite para declarar el desenlace antes de que el cierre
+  // automatico lo cierre sin resenia (docs/dominio.md §3/§12 D4). Solo tiene
+  // valor desde la primera seleccion; `desenlace` y `desenlacePostergado`
+  // acompañan el mismo ciclo.
+  cierreAutomaticoEn: z.string().nullable(),
+  desenlace: desenlaceSchema.nullable(),
+  desenlacePostergado: z.boolean(),
   fotos: z.array(
     z.object({
       id: z.string().uuid(),

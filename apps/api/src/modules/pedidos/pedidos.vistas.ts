@@ -69,6 +69,9 @@ export function mapearPedidoAVista(
     estado: pedido.estado,
     publicadoEn: pedido.publicadoEn ? pedido.publicadoEn.toISOString() : null,
     expiraEn: pedido.expiraEn ? pedido.expiraEn.toISOString() : null,
+    cierreAutomaticoEn: pedido.cierreAutomaticoEn ? pedido.cierreAutomaticoEn.toISOString() : null,
+    desenlace: pedido.desenlace,
+    desenlacePostergado: pedido.desenlacePostergado,
     fotos: [...pedido.fotos]
       .sort((a, b) => a.orden - b.orden)
       .map((foto) => ({ id: foto.id, url: foto.url, orden: foto.orden })),

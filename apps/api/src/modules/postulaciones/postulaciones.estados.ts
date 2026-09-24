@@ -62,3 +62,27 @@ export async function transicionar(
 
   return tx.postulacion.findUniqueOrThrow({ where: { id: postulacionId } });
 }
+
+/**
+ * docs/dominio.md §4 (tabla D2), tercera fila: cuando el pedido pasa a
+ * `cerrado`, `expirado`, `cancelado` o `bloqueado`, sus postulaciones
+ * `enviada`/`vista` pasan a `caducada`. Con D2/D3 (seleccion multiple, las no
+ * elegidas siguen vivas mientras quede cupo) esto no es un caso raro: un
+ * pedido con 1 de 3 elegidos que cierra casi siempre tiene postulaciones
+ * abiertas colgadas si nadie las caduca. Punto unico para las 3 transiciones
+ * de Pedido que lo disparan (expirar, cerrar, cierre automatico); siempre
+ * dentro de la misma transaccion que la transicion del pedido, sin aviso al
+ * profesional (la tabla de §4 solo avisa "caducada" en `cancelado`).
+ */
+export async function caducarPostulacionesAbiertas(
+  tx: Prisma.TransactionClient,
+  pedidoId: string,
+): Promise<void> {
+  const abiertas = await tx.postulacion.findMany({
+    where: { pedidoId, estado: { in: ["enviada", "vista"] } },
+    select: { id: true, estado: true },
+  });
+  for (const postulacion of abiertas) {
+    await transicionar(tx, postulacion.id, postulacion.estado, "caducada");
+  }
+}
