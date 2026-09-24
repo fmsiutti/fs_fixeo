@@ -11,6 +11,7 @@ import { CuandoPage } from "./features/pedidos/pages/CuandoPage";
 import { RevisarPage } from "./features/pedidos/pages/RevisarPage";
 import { PedidoDetallePage } from "./features/pedidos/pages/PedidoDetallePage";
 import { EditarPedidoPage } from "./features/pedidos/pages/EditarPedidoPage";
+import { ContactoPedidoPage } from "./features/pedidos/pages/ContactoPedidoPage";
 import { ArmarPerfilPage } from "./features/perfil/pages/ArmarPerfilPage";
 import { MiPerfilPage } from "./features/perfil/pages/MiPerfilPage";
 import { ColaVerificacionesPage } from "./features/admin/pages/ColaVerificacionesPage";
@@ -18,6 +19,7 @@ import { FeedTrabajosPage } from "./features/feed/pages/FeedTrabajosPage";
 import { FeedDetalleTrabajoPage } from "./features/feed/pages/FeedDetalleTrabajoPage";
 import { PostularmePage } from "./features/postulaciones/pages/PostularmePage";
 import { MisPostulacionesPage } from "./features/postulaciones/pages/MisPostulacionesPage";
+import { TeEligieronPage } from "./features/postulaciones/pages/TeEligieronPage";
 import { PerfilProfesionalPublicoPage } from "./features/profesionales/pages/PerfilProfesionalPublicoPage";
 import { NoEncontradaPage } from "./features/comunes/pages/NoEncontradaPage";
 import { RutaConRol } from "./components/RutaConRol";
@@ -72,6 +74,10 @@ export const router = createBrowserRouter([
     element: <EditarPedidoPage />,
   },
   {
+    path: "/pedidos/:id/contacto",
+    element: <ContactoPedidoPage />,
+  },
+  {
     path: "/perfil/armar",
     element: (
       <RutaConRol roles={["profesional"]}>
@@ -116,6 +122,14 @@ export const router = createBrowserRouter([
     element: (
       <RutaConRol roles={["profesional"]}>
         <MisPostulacionesPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/postulaciones/:id/elegido",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <TeEligieronPage />
       </RutaConRol>
     ),
   },

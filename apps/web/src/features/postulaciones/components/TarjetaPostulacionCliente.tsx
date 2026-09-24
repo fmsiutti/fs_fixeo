@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PostulacionVistaCliente } from "@fixeo/shared";
 import {
   descartarPostulacion,
   postulacionesDePedidoQueryKey,
   revertirDescartePostulacion,
+  seleccionarPostulacion,
 } from "../api";
 import { ETIQUETAS_ESTADO_POSTULACION } from "../etiquetas";
-import { formatearEstimacion } from "../lib/formato";
+import { formatearEstimacion, nombreCompleto, resumenReputacion } from "../lib/formato";
+import { pedidoQueryKey } from "../../pedidos/api";
 import { Button } from "../../../components/ui/Button";
 import { ErrorApiHttp, urlCompletaApi } from "../../../lib/http";
 import { formatearAntiguedad } from "../../../lib/fecha-relativa";
@@ -16,21 +18,27 @@ import { formatearAntiguedad } from "../../../lib/fecha-relativa";
 interface TarjetaPostulacionClienteProps {
   pedidoId: string;
   postulacion: PostulacionVistaCliente;
+  // D2/D3 (docs/dominio.md §4/§12): con el cupo de elegibles en 0 no hay que
+  // ofrecer "Elegir", ni siquiera sobre una postulacion que volvio a "vista"
+  // al revertir un descarte (esa postulacion no caduca sola: solo caducan
+  // las que ya estaban enviada/vista cuando se completo el cupo).
+  seleccionablesLibres: number;
 }
 
-function resumenReputacion(postulacion: PostulacionVistaCliente): string {
-  if (postulacion.profesional.cantidadResenias === 0) return "Nuevo en Fixeo";
-  const promedio = postulacion.profesional.promedioResenias?.toFixed(1) ?? "—";
-  return `★ ${promedio} (${postulacion.profesional.cantidadResenias})`;
-}
+// CL-08: solo se puede elegir una postulacion todavia viva (ni descartada,
+// ni retirada, ni caducada, ni ya elegida).
+const ESTADOS_ELEGIBLES = ["enviada", "vista"];
 
 /** CL-08: tarjeta comparable de una postulacion, vista del cliente dueño del pedido. */
 export function TarjetaPostulacionCliente({
   pedidoId,
   postulacion,
+  seleccionablesLibres,
 }: TarjetaPostulacionClienteProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [confirmandoDescarte, setConfirmandoDescarte] = useState(false);
+  const [confirmandoEleccion, setConfirmandoEleccion] = useState(false);
 
   function invalidar() {
     return queryClient.invalidateQueries({ queryKey: postulacionesDePedidoQueryKey(pedidoId) });
@@ -49,9 +57,19 @@ export function TarjetaPostulacionCliente({
     onSuccess: () => void invalidar(),
   });
 
-  const nombreProfesional =
-    [postulacion.profesional.nombre, postulacion.profesional.apellido].filter(Boolean).join(" ") ||
-    "Profesional";
+  // La eleccion cambia el estado (y cantidadContactos/seleccionablesLibres)
+  // del pedido, ademas de la postulacion: se invalidan ambas queries antes
+  // de navegar a CL-10 (docs/pantallas.md CL-08 -> CL-10).
+  const mutacionElegir = useMutation({
+    mutationFn: () => seleccionarPostulacion(postulacion.id),
+    onSuccess: () => {
+      void invalidar();
+      void queryClient.invalidateQueries({ queryKey: pedidoQueryKey(pedidoId) });
+      navigate(`/pedidos/${pedidoId}/contacto`);
+    },
+  });
+
+  const nombreProfesional = nombreCompleto(postulacion.profesional, "Profesional");
 
   return (
     <li className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4">
@@ -82,7 +100,7 @@ export function TarjetaPostulacionCliente({
       </div>
 
       <p className="text-xs text-slate-500">
-        {resumenReputacion(postulacion)}
+        {resumenReputacion(postulacion.profesional)}
         {postulacion.profesional.aniosExperiencia !== null
           ? ` · ${postulacion.profesional.aniosExperiencia} años de experiencia`
           : ""}
@@ -96,6 +114,45 @@ export function TarjetaPostulacionCliente({
         <p className="text-sm text-slate-600">Disponibilidad: {postulacion.disponibilidad}</p>
       )}
       <p className="text-xs text-slate-500">Enviada {formatearAntiguedad(postulacion.enviadaEn)}</p>
+
+      {ESTADOS_ELEGIBLES.includes(postulacion.estado) && seleccionablesLibres > 0 && (
+        <div className="flex flex-col gap-2">
+          {!confirmandoEleccion ? (
+            <Button type="button" onClick={() => setConfirmandoEleccion(true)}>
+              Elegir a este profesional
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-2 rounded-xl border border-teal-200 bg-teal-50 p-3">
+              <p className="text-sm text-teal-900">
+                ¿Elegís a este profesional? Vas a poder ver su teléfono y coordinar por WhatsApp.
+              </p>
+              {mutacionElegir.isError && (
+                <p role="alert" className="text-sm text-red-700">
+                  {mutacionElegir.error instanceof ErrorApiHttp
+                    ? mutacionElegir.error.mensaje
+                    : "No pudimos elegir a este profesional. Probá de nuevo."}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variante="secundario"
+                  onClick={() => setConfirmandoEleccion(false)}
+                >
+                  No, volver
+                </Button>
+                <Button
+                  type="button"
+                  cargando={mutacionElegir.isPending}
+                  onClick={() => mutacionElegir.mutate()}
+                >
+                  Sí, elegir
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {postulacion.puedeDescartar && (
         <div className="flex flex-col gap-2">

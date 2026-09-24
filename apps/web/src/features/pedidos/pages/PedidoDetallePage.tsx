@@ -172,6 +172,18 @@ export function PedidoDetallePage() {
             </dl>
           </section>
 
+          {/* CL-10: unica entrada de vuelta al contacto ya habilitado si el
+              cliente recarga o vuelve mas tarde (antes solo se llegaba
+              navegando justo despues de elegir). */}
+          {pedido.cantidadContactos > 0 && (
+            <Link
+              to={`/pedidos/${pedido.id}/contacto`}
+              className="flex min-h-11 items-center justify-center rounded-full bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800"
+            >
+              Ver contacto habilitado
+            </Link>
+          )}
+
           {pedido.estado === "en_revision" && (
             <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
               <p className="font-semibold">Lo estamos revisando</p>
@@ -279,6 +291,7 @@ export function PedidoDetallePage() {
                       key={postulacion.id}
                       pedidoId={pedido.id}
                       postulacion={postulacion}
+                      seleccionablesLibres={pedido.seleccionablesLibres}
                     />
                   ))}
                 </ul>

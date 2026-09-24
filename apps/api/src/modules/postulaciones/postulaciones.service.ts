@@ -403,6 +403,54 @@ export class PostulacionesService {
   }
 
   /**
+   * PR-06: el profesional elegido avisa que no puede tomar el trabajo.
+   * Simetrico a `retirar()`, pero solo valido desde "seleccionada" (D3,
+   * docs/dominio.md §12): el cupo ya se uso, asi que a diferencia de
+   * `retirar()` esto no libera cupo, ni decrementa `cantidadContactos`, ni
+   * borra el `Contacto` — solo cambia el estado de la postulacion y avisa
+   * al cliente.
+   */
+  async noPuedoTomarlo(
+    usuarioId: string,
+    postulacionId: string,
+  ): Promise<PostulacionVistaProfesional> {
+    const perfil = await this.buscarPerfilOrThrow(usuarioId);
+    const postulacion = await this.prisma.postulacion.findUnique({
+      where: { id: postulacionId },
+      include: INCLUDE_PEDIDO_CATEGORIA,
+    });
+    if (!postulacion || postulacion.profesionalId !== perfil.id) {
+      throw new NotFoundException({ codigo: "no_encontrado", mensaje: "La postulación no existe" });
+    }
+    if (postulacion.estado !== "seleccionada") {
+      throw new ConflictException({
+        codigo: "conflicto",
+        mensaje: "Esta postulación no está seleccionada",
+      });
+    }
+
+    await this.prisma.$transaction((tx) =>
+      transicionarPostulacion(tx, postulacion.id, "seleccionada", "retirada"),
+    );
+
+    // docs/dominio.md §4: "Rechazar despues de ser elegido queda
+    // registrado" (sin tabla de reputacion todavia, ver retirar()).
+    await this.crearNotificacionSegura({
+      usuarioId: postulacion.pedido.clienteId,
+      tipo: "profesional_no_puede_tomarlo",
+      objetoId: postulacion.pedidoId,
+    });
+
+    const actualizada = await this.prisma.postulacion.findUniqueOrThrow({
+      where: { id: postulacionId },
+      include: INCLUDE_PEDIDO_CATEGORIA,
+    });
+    return mapearPostulacionAVistaProfesional(actualizada, actualizada.pedido, {
+      otroYaElegido: this.calcularOtroYaElegido(actualizada.pedido),
+    });
+  }
+
+  /**
    * CL-08: postulaciones del pedido, para su cliente dueño. Marca como
    * "vista" (con vistaEn = ahora) todas las que todavia estan "enviada": el
    * cliente las esta abriendo en este mismo request.

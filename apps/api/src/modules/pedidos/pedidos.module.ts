@@ -6,6 +6,7 @@ import {
   OPCIONES_JOB_POR_DEFECTO,
 } from "../../infra/queue/colas.constants.js";
 import { AuthModule } from "../auth/auth.module.js";
+import { ContactosModule } from "../contactos/contactos.module.js";
 import { EventosModule } from "../eventos/eventos.module.js";
 import { ParametrosModule } from "../parametros/parametros.module.js";
 import { PostulacionesModule } from "../postulaciones/postulaciones.module.js";
@@ -21,6 +22,9 @@ import { PedidosService } from "./pedidos.service.js";
     AlmacenamientoModule,
     EventosModule,
     PostulacionesModule,
+    // ContactosModule: PedidosController (CL-10) inyecta ContactosService
+    // directo para GET :id/contacto.
+    ContactosModule,
     BullModule.registerQueue({
       name: COLA_AVISO_MATCHING,
       defaultJobOptions: OPCIONES_JOB_POR_DEFECTO,

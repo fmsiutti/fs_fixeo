@@ -177,12 +177,13 @@ model Pedido {
   cantidadContactos     Int          @default(0) @map("cantidad_contactos")
   creadoEn              DateTime     @default(now()) @map("creado_en")
 
-  cliente   Usuario      @relation(fields: [clienteId], references: [id], onDelete: Restrict)
-  categoria Categoria    @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  cliente       Usuario       @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+  categoria     Categoria     @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
   direccion     Direccion     @relation(fields: [direccionId], references: [id], onDelete: Restrict)
   barrio        Barrio        @relation(fields: [barrioId], references: [id], onDelete: Restrict)
   fotos         FotoPedido[]
   postulaciones Postulacion[]
+  contactos     Contacto[]
 
   @@index([clienteId])
   @@index([estado])
@@ -421,7 +422,7 @@ model Denuncia {
   // bajo "Campos agregados a lo que modela el documento": el documento no
   // la lista, pero sin ella no se puede ordenar ni paginar la futura cola
   // de moderacion de denuncias (slice 9).
-  creadoEn DateTime @default(now()) @map("creado_en")
+  creadoEn     DateTime           @default(now()) @map("creado_en")
 
   reportante Usuario @relation(fields: [reportanteId], references: [id], onDelete: Restrict)
 
@@ -446,31 +447,57 @@ enum EstadoPostulacion {
 // despues de retirarse no esta modelado en este slice; @@unique lo impide a
 // nivel de base hasta que haga falta lo contrario.
 model Postulacion {
-  id                  String            @id @default(uuid())
-  pedidoId            String            @map("pedido_id")
-  profesionalId       String            @map("profesional_id")
-  mensaje             String
-  estimacionMin       Int?              @map("estimacion_min")
-  estimacionMax       Int?              @map("estimacion_max")
-  estimacionADefinir  Boolean           @default(false) @map("estimacion_a_definir")
-  disponibilidad      String?
-  estado              EstadoPostulacion @default(enviada)
-  enviadaEn           DateTime          @default(now()) @map("enviada_en")
-  vistaEn             DateTime?         @map("vista_en")
+  id                 String            @id @default(uuid())
+  pedidoId           String            @map("pedido_id")
+  profesionalId      String            @map("profesional_id")
+  mensaje            String
+  estimacionMin      Int?              @map("estimacion_min")
+  estimacionMax      Int?              @map("estimacion_max")
+  estimacionADefinir Boolean           @default(false) @map("estimacion_a_definir")
+  disponibilidad     String?
+  estado             EstadoPostulacion @default(enviada)
+  enviadaEn          DateTime          @default(now()) @map("enviada_en")
+  vistaEn            DateTime?         @map("vista_en")
   // Adicion tecnica del mismo tipo que las que lista docs/dominio.md §11 bajo
   // "Campos agregados a lo que modela el documento": hace falta para calcular
   // la ventana de descarte reversible de 24 h (parametro_negocio
   // "descarte_reversible_horas").
-  descartadaEn DateTime? @map("descartada_en")
+  descartadaEn       DateTime?         @map("descartada_en")
 
   pedido      Pedido            @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   profesional PerfilProfesional @relation(fields: [profesionalId], references: [id], onDelete: Restrict)
+  contacto    Contacto?
 
   @@unique([pedidoId, profesionalId])
   @@index([pedidoId])
   @@index([profesionalId, enviadaEn])
   @@index([estado])
   @@map("postulacion")
+}
+
+// docs/dominio.md §3/§11: cada seleccion crea un Contacto (hasta 3 por
+// pedido, D2/D3), pero la misma postulacion no se puede elegir dos veces:
+// de ahi el @unique en postulacionId. onDelete Restrict hacia Postulacion
+// (no Cascade) porque las postulaciones nunca se borran, solo cambian de
+// estado (docs/dominio.md §11), asi que perder el Contacto al borrar la
+// postulacion no deberia poder pasar nunca; si algun dia se permite borrar
+// postulaciones, esta restriccion obliga a decidir que pasa con el contacto
+// primero.
+model Contacto {
+  id                   String    @id @default(uuid())
+  pedidoId             String    @map("pedido_id")
+  postulacionId        String    @unique @map("postulacion_id")
+  orden                Int
+  habilitadoEn         DateTime  @default(now()) @map("habilitado_en")
+  abiertoWhatsappEn    DateTime? @map("abierto_whatsapp_en")
+  confirmadoPorCliente Boolean?  @map("confirmado_por_cliente")
+
+  pedido      Pedido      @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  postulacion Postulacion @relation(fields: [postulacionId], references: [id], onDelete: Restrict)
+
+  @@unique([pedidoId, orden])
+  @@index([pedidoId])
+  @@map("contacto")
 }
 
 model PlantillaMensaje {

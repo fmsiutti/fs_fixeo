@@ -371,3 +371,142 @@ describe("PostulacionesService.retirar", () => {
     expect(error).toBeInstanceOf(NotFoundException);
   });
 });
+
+describe("PostulacionesService.noPuedoTomarlo", () => {
+  function crearServiceParaNoPuedoTomarlo(
+    options: {
+      perfil?: { id: string } | null;
+      postulacion?: Record<string, unknown> | null;
+    } = {},
+  ) {
+    const perfil = options.perfil === undefined ? { id: "perfil-1" } : options.perfil;
+    const postulacionBase = {
+      id: "postulacion-1",
+      pedidoId: "pedido-1",
+      profesionalId: "perfil-1",
+      estado: "seleccionada",
+      mensaje: "Puedo pasar mañana a la tarde para revisar la instalación completa",
+      estimacionADefinir: true,
+      estimacionMin: null,
+      estimacionMax: null,
+      disponibilidad: null,
+      enviadaEn: new Date("2026-01-01T00:00:00.000Z"),
+      vistaEn: new Date("2026-01-01T01:00:00.000Z"),
+      pedido: {
+        id: "pedido-1",
+        clienteId: "cliente-1",
+        cantidadContactos: 1,
+        estado: "contacto_habilitado",
+        categoria: { nombre: "Plomería", slug: "plomeria" },
+        descripcion: "Descripcion de prueba",
+      },
+    };
+    const postulacion = options.postulacion === undefined ? postulacionBase : options.postulacion;
+
+    // A proposito sin las claves "pedido" ni "contacto": D3 dice que
+    // "no puedo tomarlo" no libera cupo, no decrementa cantidadContactos ni
+    // toca la fila Contacto. Si un cambio futuro tocara alguna de las dos
+    // tablas dentro de la misma transaccion, este mock explotaria con un
+    // TypeError en vez de dejar pasar el bug en silencio.
+    const tx = {
+      postulacion: {
+        updateMany: jest
+          .fn<(args: unknown) => Promise<{ count: number }>>()
+          .mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest
+          .fn<(args: unknown) => Promise<unknown>>()
+          .mockResolvedValue({ ...(postulacion as Record<string, unknown>), estado: "retirada" }),
+      },
+    };
+
+    const prisma = {
+      perfilProfesional: {
+        findUnique: jest.fn<(args: unknown) => Promise<unknown>>().mockResolvedValue(perfil),
+      },
+      postulacion: {
+        findUnique: jest.fn<(args: unknown) => Promise<unknown>>().mockResolvedValue(postulacion),
+        findUniqueOrThrow: jest
+          .fn<(args: unknown) => Promise<unknown>>()
+          .mockResolvedValue({ ...(postulacion as Record<string, unknown>), estado: "retirada" }),
+      },
+      $transaction: jest.fn<(callback: CallbackTransaccion) => Promise<unknown>>(),
+    };
+    prisma.$transaction.mockImplementation((callback: CallbackTransaccion) => callback(tx));
+
+    const parametros = crearParametrosMock();
+    const eventos = {
+      registrar: jest.fn<(datos: unknown) => Promise<void>>().mockResolvedValue(undefined),
+    } as unknown as EventosService;
+    const notificaciones = {
+      crear: jest.fn<(datos: unknown) => Promise<void>>().mockResolvedValue(undefined),
+    } as unknown as NotificacionesService;
+
+    const service = new PostulacionesService(
+      prisma as unknown as PrismaService,
+      parametros,
+      eventos,
+      notificaciones,
+    );
+    return { service, prisma, tx, notificaciones };
+  }
+
+  it("transiciona 'seleccionada' -> 'retirada' y avisa al cliente, sin tocar pedido ni contacto", async () => {
+    const { service, tx, notificaciones } = crearServiceParaNoPuedoTomarlo();
+
+    const vista = await service.noPuedoTomarlo("usuario-1", "postulacion-1");
+
+    expect(tx.postulacion.updateMany).toHaveBeenCalledWith({
+      where: { id: "postulacion-1", estado: "seleccionada" },
+      data: { estado: "retirada" },
+    });
+    expect(vista.estado).toBe("retirada");
+    expect(notificaciones.crear).toHaveBeenCalledWith({
+      usuarioId: "cliente-1",
+      tipo: "profesional_no_puede_tomarlo",
+      objetoId: "pedido-1",
+    });
+  });
+
+  it.each(["enviada", "vista", "descartada", "retirada", "caducada"] as const)(
+    "rechaza con conflicto desde el estado '%s', sin tocar la base",
+    async (estadoOrigen) => {
+      const { service, tx, prisma } = crearServiceParaNoPuedoTomarlo({
+        postulacion: {
+          id: "postulacion-1",
+          profesionalId: "perfil-1",
+          estado: estadoOrigen,
+          mensaje: "Puedo pasar mañana a la tarde para revisar la instalación completa",
+          estimacionADefinir: true,
+          estimacionMin: null,
+          estimacionMax: null,
+          disponibilidad: null,
+          enviadaEn: new Date("2026-01-01T00:00:00.000Z"),
+          vistaEn: null,
+          pedido: {
+            id: "pedido-1",
+            clienteId: "cliente-1",
+            cantidadContactos: 0,
+            estado: "publicado",
+            categoria: { nombre: "Plomería", slug: "plomeria" },
+            descripcion: "Descripcion de prueba",
+          },
+        },
+      });
+
+      const error = await capturarError(service.noPuedoTomarlo("usuario-1", "postulacion-1"));
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toMatchObject({ codigo: "conflicto" });
+      expect(tx.postulacion.updateMany).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it("404 si la postulacion no existe o es de otro profesional", async () => {
+    const { service } = crearServiceParaNoPuedoTomarlo({ postulacion: null });
+
+    const error = await capturarError(service.noPuedoTomarlo("usuario-1", "postulacion-1"));
+
+    expect(error).toBeInstanceOf(NotFoundException);
+  });
+});

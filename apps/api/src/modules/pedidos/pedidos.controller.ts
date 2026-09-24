@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import type {
+  ContactoVistaCliente,
   PedidoFeedPagina,
   PedidoResumenVista,
   PedidoVista,
@@ -11,6 +12,7 @@ import { UsuarioActual } from "../../common/decorators/usuario-actual.decorator.
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard.js";
 import { RolesGuard } from "../../common/guards/roles.guard.js";
 import type { Usuario } from "../../generated/prisma/client.js";
+import { ContactosService } from "../contactos/contactos.service.js";
 import { PostulacionesService } from "../postulaciones/postulaciones.service.js";
 import { CrearPedidoDto } from "./dto/crear-pedido.dto.js";
 import { EditarPedidoDto } from "./dto/editar-pedido.dto.js";
@@ -25,6 +27,7 @@ export class PedidosController {
     private readonly pedidosService: PedidosService,
     private readonly pedidosFeedService: PedidosFeedService,
     private readonly postulacionesService: PostulacionesService,
+    private readonly contactosService: ContactosService,
   ) {}
 
   @Post()
@@ -76,6 +79,15 @@ export class PedidosController {
     @Param("id") id: string,
   ): Promise<PostulacionVistaCliente[]> {
     return this.postulacionesService.listarDelPedido(usuario.id, id);
+  }
+
+  // CL-10.
+  @Get(":id/contacto")
+  obtenerContacto(
+    @UsuarioActual() usuario: Usuario,
+    @Param("id") id: string,
+  ): Promise<ContactoVistaCliente[]> {
+    return this.contactosService.obtenerDelPedido(usuario.id, id);
   }
 
   @Patch(":id")

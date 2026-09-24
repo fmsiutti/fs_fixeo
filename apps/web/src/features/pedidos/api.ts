@@ -1,6 +1,7 @@
 import type {
   BarrioVista,
   CategoriaVista,
+  ContactoVistaCliente,
   CrearPedido,
   EditarPedido,
   PedidoResumenVista,
@@ -51,6 +52,16 @@ export function editarPedido(id: string, input: EditarPedido): Promise<PedidoVis
     method: "PATCH",
     body: JSON.stringify(input),
   });
+}
+
+// --- CL-10: contacto habilitado, hasta 3 bloques (uno por elegido) ---
+
+export function contactoDelPedidoQueryKey(pedidoId: string): readonly [string, string, string] {
+  return ["pedidos", pedidoId, "contacto"] as const;
+}
+
+export function obtenerContactoDelPedido(pedidoId: string): Promise<ContactoVistaCliente[]> {
+  return fetchJson<ContactoVistaCliente[]>(`/pedidos/${pedidoId}/contacto`);
 }
 
 export interface FotoBorradorSubida {

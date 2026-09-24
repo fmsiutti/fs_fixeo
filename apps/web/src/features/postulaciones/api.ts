@@ -1,4 +1,6 @@
 import type {
+  ContactoVistaCliente,
+  ContactoVistaProfesional,
   ContadorDiarioPostulaciones,
   CrearPlantillaMensaje,
   CrearPostulacion,
@@ -102,5 +104,41 @@ export function descartarPostulacion(id: string): Promise<PostulacionVistaClient
 export function revertirDescartePostulacion(id: string): Promise<PostulacionVistaCliente> {
   return fetchJson<PostulacionVistaCliente>(`/postulaciones/${id}/revertir-descarte`, {
     method: "PATCH",
+  });
+}
+
+export function seleccionarPostulacion(id: string): Promise<ContactoVistaCliente> {
+  return fetchJson<ContactoVistaCliente>(`/postulaciones/${id}/seleccionar`, { method: "PATCH" });
+}
+
+// --- PR-06/CL-10: contacto habilitado tras la seleccion ---
+
+export function noPuedoTomarloPostulacion(id: string): Promise<PostulacionVistaProfesional> {
+  return fetchJson<PostulacionVistaProfesional>(`/postulaciones/${id}/no-puedo-tomarlo`, {
+    method: "PATCH",
+  });
+}
+
+export function contactoElegidoQueryKey(postulacionId: string): readonly [string, string, string] {
+  return ["postulaciones", postulacionId, "elegido"] as const;
+}
+
+export function obtenerContactoElegido(postulacionId: string): Promise<ContactoVistaProfesional> {
+  return fetchJson<ContactoVistaProfesional>(`/postulaciones/${postulacionId}/elegido`);
+}
+
+/**
+ * PR-06/CL-10: registra que se abrio WhatsApp o se inicio una llamada desde
+ * la pantalla de contacto. Se llama en el momento, sin esperar la respuesta
+ * ni bloquear la navegacion del `tel:`/`wa.me` (call sites: siempre con
+ * `.catch()`, nunca `await`, mismo criterio que `registrarEvento`).
+ */
+export function registrarEventoContacto(
+  postulacionId: string,
+  tipo: "whatsapp_abierto" | "llamada_iniciada",
+): Promise<void> {
+  return fetchJson<void>(`/postulaciones/${postulacionId}/evento-contacto`, {
+    method: "POST",
+    body: JSON.stringify({ tipo }),
   });
 }

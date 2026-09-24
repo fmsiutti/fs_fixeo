@@ -74,6 +74,16 @@ function TarjetaPostulacion({ postulacion, mostrarRetirar }: TarjetaPostulacionP
         </p>
       )}
 
+      {/* PR-06: la pestaña "seleccionadas" enlaza al contacto habilitado. */}
+      {postulacion.estado === "seleccionada" && (
+        <Link
+          to={`/postulaciones/${postulacion.id}/elegido`}
+          className="min-h-11 self-start text-sm font-semibold text-teal-800 underline"
+        >
+          Ver contacto
+        </Link>
+      )}
+
       {mostrarRetirar && puedeRetirar && (
         <div className="flex flex-col gap-2">
           {!confirmando ? (

@@ -59,6 +59,27 @@ export function puedeRecibirPostulaciones(
 }
 
 /**
+ * CL-08/D2/D3 (docs/dominio.md §4/§12): el cliente puede elegir mientras el
+ * pedido siga activo (todavia no llego a un estado terminal) y le quede
+ * cupo de elegibles. A diferencia de `puedeRecibirPostulaciones`, no mira
+ * `cantidadPostulaciones`: elegir no depende de que sigan entrando
+ * postulaciones nuevas.
+ */
+export function puedeSeleccionar(
+  pedido: { estado: EstadoPedido; cantidadContactos: number },
+  seleccionablesMax: number,
+): boolean {
+  if (
+    pedido.estado !== "publicado" &&
+    pedido.estado !== "con_postulaciones" &&
+    pedido.estado !== "contacto_habilitado"
+  ) {
+    return false;
+  }
+  return pedido.cantidadContactos < seleccionablesMax;
+}
+
+/**
  * Unico punto por el que un Pedido cambia de estado (CLAUDE.md, regla no
  * negociable #1: nunca un `update({ estado })` suelto). Se llama siempre
  * dentro de un `prisma.$transaction`.

@@ -2,7 +2,7 @@ import { describe, expect, it, jest } from "@jest/globals";
 import { ConflictException } from "@nestjs/common";
 import type { EstadoPedido } from "@fixeo/shared";
 import type { Pedido, Prisma } from "../../generated/prisma/client.js";
-import { transicionar, validarTransicion } from "./pedidos.estados.js";
+import { puedeSeleccionar, transicionar, validarTransicion } from "./pedidos.estados.js";
 
 function crearPedido(overrides: Partial<Pedido> = {}): Pedido {
   return {
@@ -131,5 +131,40 @@ describe("transicionar", () => {
       transicionar(tx as unknown as Prisma.TransactionClient, "pedido-1", "publicado", "cancelado"),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.pedido.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+});
+
+// CL-08/D2/D3 (docs/dominio.md §4/§12): usado por ContactosService.seleccionar,
+// tanto en el atajo previo a la transaccion como en la revalidacion sobre la
+// lectura fresca con lock (mismo criterio que puedeRecibirPostulaciones).
+describe("puedeSeleccionar", () => {
+  it.each(["publicado", "con_postulaciones", "contacto_habilitado"] as const)(
+    "permite elegir con estado '%s' y cupo libre",
+    (estado: EstadoPedido) => {
+      expect(puedeSeleccionar({ estado, cantidadContactos: 0 }, 3)).toBe(true);
+    },
+  );
+
+  it.each(["borrador", "en_revision", "cerrado", "expirado", "cancelado", "bloqueado"] as const)(
+    "no permite elegir con estado '%s', aunque haya cupo libre",
+    (estado: EstadoPedido) => {
+      expect(puedeSeleccionar({ estado, cantidadContactos: 0 }, 3)).toBe(false);
+    },
+  );
+
+  it("permite elegir mientras cantidadContactos sea menor que el cupo maximo", () => {
+    expect(puedeSeleccionar({ estado: "contacto_habilitado", cantidadContactos: 2 }, 3)).toBe(true);
+  });
+
+  it("no permite elegir cuando ya se completo el cupo de seleccionables (D3: no hay una 4ta seleccion)", () => {
+    expect(puedeSeleccionar({ estado: "contacto_habilitado", cantidadContactos: 3 }, 3)).toBe(
+      false,
+    );
+  });
+
+  it("no permite elegir si cantidadContactos ya supera el cupo (defensa extra, no deberia pasar en la practica)", () => {
+    expect(puedeSeleccionar({ estado: "contacto_habilitado", cantidadContactos: 4 }, 3)).toBe(
+      false,
+    );
   });
 });
