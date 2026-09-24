@@ -59,6 +59,9 @@ function pedidoDeEjemplo(overrides: Partial<PedidoVista> = {}): PedidoVista {
     fotos: [],
     vistas: 0,
     cantidadPostulaciones: 0,
+    postulacionesCupoLleno: false,
+    cantidadContactos: 0,
+    seleccionablesLibres: 3,
     creadoEn: new Date("2026-01-01T00:00:00.000Z").toISOString(),
     ...overrides,
   };

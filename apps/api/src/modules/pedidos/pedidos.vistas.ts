@@ -16,12 +16,25 @@ export type PedidoConRelaciones = Pedido & {
   fotos: FotoPedido[];
 };
 
+// CL-08 (revision de codigo del slice 6): igual que DatosDetalleFeed de
+// pedidos.feed.vistas.ts, el mapeo de estos campos vive en el service (que es
+// quien conoce los parametros de negocio via ParametrosService), no aca: esta
+// funcion se mantiene pura y facil de testear sin mockear ParametrosService.
+export interface DatosCupoPedido {
+  postulacionesCupoLleno: boolean;
+  cantidadContactos: number;
+  seleccionablesLibres: number;
+}
+
 /**
  * Vista completa, solo para el dueno del pedido (CL-07). No hay todavia
  * ningun otro rol que vea un Pedido (el feed del profesional es el slice 5):
  * no ocultar nada aca no viola la regla de visibilidad de docs/dominio.md §7.
  */
-export function mapearPedidoAVista(pedido: PedidoConRelaciones): PedidoVista {
+export function mapearPedidoAVista(
+  pedido: PedidoConRelaciones,
+  datosCupo: DatosCupoPedido,
+): PedidoVista {
   return {
     id: pedido.id,
     categoria: {
@@ -61,6 +74,9 @@ export function mapearPedidoAVista(pedido: PedidoConRelaciones): PedidoVista {
       .map((foto) => ({ id: foto.id, url: foto.url, orden: foto.orden })),
     vistas: pedido.vistas,
     cantidadPostulaciones: pedido.cantidadPostulaciones,
+    postulacionesCupoLleno: datosCupo.postulacionesCupoLleno,
+    cantidadContactos: datosCupo.cantidadContactos,
+    seleccionablesLibres: datosCupo.seleccionablesLibres,
     creadoEn: pedido.creadoEn.toISOString(),
   };
 }

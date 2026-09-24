@@ -4,12 +4,14 @@ import type {
   PedidoResumenVista,
   PedidoVista,
   PedidoVistaProfesional,
+  PostulacionVistaCliente,
 } from "@fixeo/shared";
 import { Roles } from "../../common/decorators/roles.decorator.js";
 import { UsuarioActual } from "../../common/decorators/usuario-actual.decorator.js";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard.js";
 import { RolesGuard } from "../../common/guards/roles.guard.js";
 import type { Usuario } from "../../generated/prisma/client.js";
+import { PostulacionesService } from "../postulaciones/postulaciones.service.js";
 import { CrearPedidoDto } from "./dto/crear-pedido.dto.js";
 import { EditarPedidoDto } from "./dto/editar-pedido.dto.js";
 import { PedidoFeedQueryDto } from "./dto/pedido-feed-query.dto.js";
@@ -22,6 +24,7 @@ export class PedidosController {
   constructor(
     private readonly pedidosService: PedidosService,
     private readonly pedidosFeedService: PedidosFeedService,
+    private readonly postulacionesService: PostulacionesService,
   ) {}
 
   @Post()
@@ -64,6 +67,15 @@ export class PedidosController {
   @Patch(":id/cancelar")
   cancelar(@UsuarioActual() usuario: Usuario, @Param("id") id: string): Promise<PedidoVista> {
     return this.pedidosService.cancelar(usuario.id, id);
+  }
+
+  // CL-08.
+  @Get(":id/postulaciones")
+  listarPostulaciones(
+    @UsuarioActual() usuario: Usuario,
+    @Param("id") id: string,
+  ): Promise<PostulacionVistaCliente[]> {
+    return this.postulacionesService.listarDelPedido(usuario.id, id);
   }
 
   @Patch(":id")

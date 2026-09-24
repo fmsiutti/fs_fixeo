@@ -2,6 +2,7 @@ import { describe, expect, it, jest } from "@jest/globals";
 import { ConflictException, NotFoundException } from "@nestjs/common";
 import type { GuardarOficios, ZonaCoberturaInput } from "@fixeo/shared";
 import type { PrismaService } from "../../infra/prisma/prisma.service.js";
+import type { EventosService } from "../eventos/eventos.service.js";
 import { ProfesionalesService } from "./profesionales.service.js";
 
 type CallbackTransaccion = (tx: unknown) => Promise<unknown>;
@@ -63,7 +64,12 @@ function crearService(
   };
   prisma.$transaction.mockImplementation((callback: CallbackTransaccion) => callback(tx));
 
-  const service = new ProfesionalesService(prisma as unknown as PrismaService);
+  const eventos = { registrar: jest.fn<(datos: unknown) => Promise<void>>() };
+
+  const service = new ProfesionalesService(
+    prisma as unknown as PrismaService,
+    eventos as unknown as EventosService,
+  );
   // obtenerPropio se llama al final de cada metodo: se le pisa el mock para
   // no tener que armar el include completo en cada test (ya tiene su propio
   // spec en profesionales.vistas.spec.ts).

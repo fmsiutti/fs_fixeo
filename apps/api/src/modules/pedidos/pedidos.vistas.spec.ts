@@ -77,15 +77,23 @@ function crearPedidoConRelaciones(
   } as PedidoConRelaciones;
 }
 
+// Valores fijos y sencillos de chequear a mano en los tests que no ejercitan
+// el calculo de cupo en si mismo (ver el describe de mas abajo para eso).
+const DATOS_CUPO_NEUTROS = {
+  postulacionesCupoLleno: false,
+  cantidadContactos: 0,
+  seleccionablesLibres: 3,
+};
+
 describe("mapearPedidoAVista", () => {
   it("solo expone los campos de pedidoVistaSchema, nunca clienteId, direccionId ni motivoModeracion", () => {
-    const vista = mapearPedidoAVista(crearPedidoConRelaciones());
+    const vista = mapearPedidoAVista(crearPedidoConRelaciones(), DATOS_CUPO_NEUTROS);
 
     expect(Object.keys(vista).sort()).toEqual(Object.keys(pedidoVistaSchema.shape).sort());
   });
 
   it("no expone campos internos de las relaciones anidadas (activa de categoria, barrioId de direccion, activo de barrio)", () => {
-    const vista = mapearPedidoAVista(crearPedidoConRelaciones());
+    const vista = mapearPedidoAVista(crearPedidoConRelaciones(), DATOS_CUPO_NEUTROS);
 
     expect(vista.categoria).not.toHaveProperty("activa");
     expect(vista.direccion).not.toHaveProperty("barrioId");
@@ -93,7 +101,7 @@ describe("mapearPedidoAVista", () => {
   });
 
   it("ordena las fotos por orden ascendente, sin importar el orden en que llegaron", () => {
-    const vista = mapearPedidoAVista(crearPedidoConRelaciones());
+    const vista = mapearPedidoAVista(crearPedidoConRelaciones(), DATOS_CUPO_NEUTROS);
 
     expect(vista.fotos.map((foto) => foto.orden)).toEqual([0, 1]);
   });
@@ -101,7 +109,7 @@ describe("mapearPedidoAVista", () => {
   it("mapea los campos escalares 1 a 1 y las fechas a ISO string", () => {
     const pedido = crearPedidoConRelaciones();
 
-    const vista = mapearPedidoAVista(pedido);
+    const vista = mapearPedidoAVista(pedido, DATOS_CUPO_NEUTROS);
 
     expect(vista).toMatchObject({
       id: pedido.id,
@@ -124,10 +132,27 @@ describe("mapearPedidoAVista", () => {
       expiraEn: null,
     });
 
-    const vista = mapearPedidoAVista(pedido);
+    const vista = mapearPedidoAVista(pedido, DATOS_CUPO_NEUTROS);
 
     expect(vista.publicadoEn).toBeNull();
     expect(vista.expiraEn).toBeNull();
+  });
+
+  // CL-08 (revision de codigo del slice 6): estos 3 campos no se calculan aca
+  // (ver pedidos.service.ts, que es quien conoce ParametrosService), pero la
+  // vista tiene que trasladar sin tocar lo que le llega calculado.
+  it("traslada los 3 campos de cupo tal cual los calculo el service", () => {
+    const pedido = crearPedidoConRelaciones({ cantidadContactos: 2, cantidadPostulaciones: 8 });
+
+    const vista = mapearPedidoAVista(pedido, {
+      postulacionesCupoLleno: true,
+      cantidadContactos: 2,
+      seleccionablesLibres: 1,
+    });
+
+    expect(vista.postulacionesCupoLleno).toBe(true);
+    expect(vista.cantidadContactos).toBe(2);
+    expect(vista.seleccionablesLibres).toBe(1);
   });
 });
 

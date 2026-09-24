@@ -37,6 +37,28 @@ export function validarTransicion(origen: EstadoPedido, destino: EstadoPedido): 
 }
 
 /**
+ * docs/dominio.md §6 (ultimo bloque) y §4/D2/D3: un pedido acepta nuevas
+ * postulaciones si esta `publicado` o `con_postulaciones`, o si esta
+ * `contacto_habilitado` pero todavia le queda cupo de elegibles Y de
+ * postulaciones. Mismo criterio que ya usan `armarWhereDeCobertura` y
+ * `obtenerDelFeed` de pedidos-feed.service.ts (PR-02/PR-03) para decidir si
+ * un pedido sigue en el feed del profesional: se extrae aca porque
+ * PostulacionesService.crear (PR-04) necesita exactamente la misma regla
+ * para decidir si acepta el POST, y las dos tienen que estar sincronizadas.
+ */
+export function puedeRecibirPostulaciones(
+  pedido: { estado: EstadoPedido; cantidadContactos: number; cantidadPostulaciones: number },
+  seleccionablesMax: number,
+  postulacionesMax: number,
+): boolean {
+  if (pedido.estado === "publicado" || pedido.estado === "con_postulaciones") return true;
+  if (pedido.estado !== "contacto_habilitado") return false;
+  return (
+    pedido.cantidadContactos < seleccionablesMax && pedido.cantidadPostulaciones < postulacionesMax
+  );
+}
+
+/**
  * Unico punto por el que un Pedido cambia de estado (CLAUDE.md, regla no
  * negociable #1: nunca un `update({ estado })` suelto). Se llama siempre
  * dentro de un `prisma.$transaction`.

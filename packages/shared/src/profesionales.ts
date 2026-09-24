@@ -150,6 +150,22 @@ export const zonaCoberturaVistaSchema = z
 
 export type ZonaCoberturaVista = z.infer<typeof zonaCoberturaVistaSchema>;
 
+// CL-09 (revision de codigo del slice 6): version publica de la zona, sin
+// `centroLat`/`centroLng`. Esas coordenadas son el punto de referencia real
+// del profesional (en la practica, su casa o taller) — exponerlas a
+// cualquier usuario autenticado que abre un perfil publico es un dato
+// personal de mas (docs/dominio.md §15), y la pantalla nunca necesito mas que
+// el radio en km. `zonaCoberturaVistaSchema` (con coordenadas) sigue
+// reservado para la vista propia del dueno del perfil (PR-07).
+export const zonaCoberturaVistaPublicaSchema = z
+  .discriminatedUnion("tipo", [
+    z.object({ tipo: z.literal("barrios"), barrioIds: z.array(z.string().uuid()) }),
+    z.object({ tipo: z.literal("radio"), radioKm: z.number() }),
+  ])
+  .nullable();
+
+export type ZonaCoberturaVistaPublica = z.infer<typeof zonaCoberturaVistaPublicaSchema>;
+
 // Resumen de una verificacion propia (PR-07/PR-01): a diferencia de
 // verificacionColaVistaSchema (solo moderador/soporte), este es lo minimo
 // que necesita el dueno del perfil para saber por que se rechazo algo.
@@ -240,3 +256,33 @@ export const verificacionColaQuerySchema = z.object({
 });
 
 export type VerificacionColaQuery = z.infer<typeof verificacionColaQuerySchema>;
+
+// CL-09 · Perfil del profesional, vista publica (para el cliente que evalua
+// postulaciones). Nombre y apellido siempre completos (docs/dominio.md §7:
+// "Nombre y perfil del profesional | Completo | Completo") — el telefono NO
+// esta en este schema, ese es el unico dato que sigue oculto antes de elegir.
+// Sin galeria ni distribucion de resenias por puntaje: no hay tabla modelada
+// para fotos de trabajos, y Resenia recien se modela en el slice 8 (por ahora
+// promedioResenias/cantidadResenias siempre reflejan "Nuevo en Fixeo").
+export const perfilProfesionalVistaPublicaSchema = z.object({
+  id: z.string().uuid(),
+  nombre: z.string().nullable(),
+  apellido: z.string().nullable(),
+  fotoUrl: z.string().nullable(),
+  presentacion: z.string().nullable(),
+  aniosExperiencia: z.number().nullable(),
+  estadoVerificacion: estadoVerificacionSchema,
+  promedioResenias: z.number().nullable(),
+  cantidadResenias: z.number(),
+  trabajosCerrados: z.number(),
+  oficios: z.array(
+    z.object({
+      categoria: z.object({ nombre: z.string(), slug: z.string() }),
+      subcategorias: z.array(z.string()),
+      matriculaEstado: estadoMatriculaSchema,
+    }),
+  ),
+  zonaCobertura: zonaCoberturaVistaPublicaSchema,
+});
+
+export type PerfilProfesionalVistaPublica = z.infer<typeof perfilProfesionalVistaPublicaSchema>;

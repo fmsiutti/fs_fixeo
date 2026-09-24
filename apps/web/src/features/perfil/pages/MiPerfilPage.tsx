@@ -1,32 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import type {
-  EstadoMatricula,
-  EstadoVerificacion,
-  PerfilProfesionalVistaPropia,
-} from "@fixeo/shared";
-import type { TonoBadge } from "../../../components/ui/Badge";
+import type { PerfilProfesionalVistaPropia } from "@fixeo/shared";
 import { obtenerPerfilProfesional, pausarPerfil, perfilProfesionalQueryKey } from "../api";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
 import { ErrorApiHttp } from "../../../lib/http";
-import { ETIQUETAS_ESTADO_MATRICULA, ETIQUETAS_ESTADO_VERIFICACION } from "../etiquetas";
+import {
+  ETIQUETAS_ESTADO_MATRICULA,
+  ETIQUETAS_ESTADO_VERIFICACION,
+  TONOS_ESTADO_MATRICULA,
+  TONOS_ESTADO_VERIFICACION,
+} from "../etiquetas";
 import { verificacionMatriculaRechazada, verificacionRechazadaMasReciente } from "../utils";
-
-const TONOS_ESTADO_VERIFICACION: Record<EstadoVerificacion, TonoBadge> = {
-  pendiente: "advertencia",
-  aprobada: "exito",
-  rechazada: "error",
-};
-
-const TONOS_ESTADO_MATRICULA: Record<EstadoMatricula, TonoBadge> = {
-  no_requerida: "neutro",
-  pendiente: "advertencia",
-  validada: "exito",
-  rechazada: "error",
-  vencida: "error",
-};
 
 /** PR-07 · Mi perfil y reputacion. No incluye plantillas de mensaje: eso pertenece al slice de Postulaciones. */
 export function MiPerfilPage() {

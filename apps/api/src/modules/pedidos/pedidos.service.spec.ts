@@ -86,6 +86,7 @@ function crearPedidoCreado(overrides: Record<string, unknown> = {}) {
     fotos: [],
     vistas: 0,
     cantidadPostulaciones: 0,
+    cantidadContactos: 0,
     creadoEn: new Date("2026-01-01T00:00:00.000Z"),
     ...overrides,
   };
@@ -98,6 +99,8 @@ function crearParametrosMock(overrides: Partial<Record<string, number>> = {}): P
     descripcion_min: 20,
     descripcion_max: 1000,
     fotos_max: 6,
+    seleccionables_max_por_pedido: 3,
+    postulaciones_max_por_pedido: 8,
     ...overrides,
   };
   return {
@@ -637,5 +640,47 @@ describe("PedidosService.editar", () => {
 
     expect(error).toBeInstanceOf(BadRequestException);
     expect(prisma.pedido.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+// CL-08 (revision de codigo del slice 6, hallazgos 5 y 6): estos 3 campos
+// tienen que salir siempre de ParametrosService, nunca de un numero adivinado
+// en el front. pedidos.vistas.spec.ts ya prueba que mapearPedidoAVista
+// traslada lo que le llega calculado; esto prueba que PedidosService calcula
+// bien esos valores antes de mapear.
+describe("PedidosService.obtenerPropio (cupo de CL-08)", () => {
+  it("calcula postulacionesCupoLleno, cantidadContactos y seleccionablesLibres a partir de los parametros de negocio", async () => {
+    const { service } = crearService({
+      pedidoExistente: crearPedidoCreado({
+        clienteId: "cliente-1",
+        estado: "contacto_habilitado",
+        cantidadPostulaciones: 8,
+        cantidadContactos: 2,
+      }),
+      parametros: { seleccionables_max_por_pedido: 3, postulaciones_max_por_pedido: 8 },
+    });
+
+    const vista = await service.obtenerPropio("cliente-1", "pedido-1");
+
+    expect(vista.postulacionesCupoLleno).toBe(true);
+    expect(vista.cantidadContactos).toBe(2);
+    expect(vista.seleccionablesLibres).toBe(1);
+  });
+
+  it("deja postulacionesCupoLleno en false y seleccionablesLibres al maximo cuando el pedido recien se publico", async () => {
+    const { service } = crearService({
+      pedidoExistente: crearPedidoCreado({
+        clienteId: "cliente-1",
+        estado: "publicado",
+        cantidadPostulaciones: 0,
+        cantidadContactos: 0,
+      }),
+      parametros: { seleccionables_max_por_pedido: 3, postulaciones_max_por_pedido: 8 },
+    });
+
+    const vista = await service.obtenerPropio("cliente-1", "pedido-1");
+
+    expect(vista.postulacionesCupoLleno).toBe(false);
+    expect(vista.seleccionablesLibres).toBe(3);
   });
 });

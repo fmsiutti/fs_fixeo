@@ -142,6 +142,16 @@ export const pedidoVistaSchema = z.object({
   ),
   vistas: z.number(),
   cantidadPostulaciones: z.number(),
+  // CL-08 (revision de codigo del slice 6): antes el front asumia el cupo de
+  // 8 hardcodeado y "cuantos lugares quedan" adivinando a partir de si habia
+  // alguna postulacion "seleccionada", lo que podia mostrar un aviso falso
+  // cuando ya no quedaba ningun lugar. El backend ya calcula estos mismos
+  // valores para PedidoVistaProfesional (PR-03); se exponen tambien aca para
+  // que el dueno del pedido nunca vea un numero inventado ni desincronizado
+  // de `postulaciones_max_por_pedido` / `seleccionables_max_por_pedido`.
+  postulacionesCupoLleno: z.boolean(),
+  cantidadContactos: z.number(),
+  seleccionablesLibres: z.number(),
   creadoEn: z.string(),
 });
 

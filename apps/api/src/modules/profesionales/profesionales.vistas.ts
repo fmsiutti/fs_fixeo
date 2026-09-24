@@ -1,13 +1,16 @@
 import type {
   OficioVista,
   PerfilProfesionalVistaPropia,
+  PerfilProfesionalVistaPublica,
   VerificacionResumenVista,
   ZonaCoberturaVista,
+  ZonaCoberturaVistaPublica,
 } from "@fixeo/shared";
 import type {
   Categoria,
   OficioProfesional,
   PerfilProfesional,
+  Usuario,
   Verificacion,
   ZonaCobertura,
 } from "../../generated/prisma/client.js";
@@ -73,6 +76,41 @@ function mapearOficioAVista(oficio: OficioConCategoria): OficioVista {
   };
 }
 
+export type PerfilConRelacionesPublicas = PerfilProfesional & {
+  usuario: Pick<Usuario, "nombre" | "apellido" | "fotoUrl">;
+  oficios: OficioConCategoria[];
+  zonaCobertura: ZonaCobertura | null;
+};
+
+/**
+ * CL-09: vista publica, para el cliente que evalua postulaciones. Sin
+ * `usuarioId` ni telefono (docs/dominio.md §7: el telefono del profesional
+ * sigue oculto hasta la seleccion), ni verificaciones en curso (eso es solo
+ * para el dueno del perfil, PR-07).
+ */
+export function mapearPerfilAVistaPublica(
+  perfil: PerfilConRelacionesPublicas,
+): PerfilProfesionalVistaPublica {
+  return {
+    id: perfil.id,
+    nombre: perfil.usuario.nombre,
+    apellido: perfil.usuario.apellido,
+    fotoUrl: perfil.usuario.fotoUrl,
+    presentacion: perfil.presentacion,
+    aniosExperiencia: perfil.aniosExperiencia,
+    estadoVerificacion: perfil.estadoVerificacion,
+    promedioResenias: perfil.promedioResenias,
+    cantidadResenias: perfil.cantidadResenias,
+    trabajosCerrados: perfil.trabajosCerrados,
+    oficios: perfil.oficios.map((oficio) => ({
+      categoria: { nombre: oficio.categoria.nombre, slug: oficio.categoria.slug },
+      subcategorias: oficio.subcategorias,
+      matriculaEstado: oficio.matriculaEstado,
+    })),
+    zonaCobertura: perfil.zonaCobertura ? mapearZonaAVistaPublica(perfil.zonaCobertura) : null,
+  };
+}
+
 function mapearZonaAVista(zona: ZonaCobertura): ZonaCoberturaVista {
   if (zona.tipo === "barrios") {
     return { tipo: "barrios", barrioIds: zona.barrioIds };
@@ -83,6 +121,25 @@ function mapearZonaAVista(zona: ZonaCobertura): ZonaCoberturaVista {
     // cuando tipo = "radio" (profesionales.service.ts).
     centroLat: zona.centroLat ?? 0,
     centroLng: zona.centroLng ?? 0,
+    radioKm: zona.radioKm ?? 0,
+  };
+}
+
+/**
+ * CL-09 (revision de codigo del slice 6): a diferencia de mapearZonaAVista
+ * (dueno del perfil, PR-07), esta version nunca expone `centroLat`/`centroLng`.
+ * Son el punto de referencia real del profesional (en la practica, su casa o
+ * taller): exponerlo a cualquier usuario autenticado que abre un perfil
+ * publico es un dato personal de mas que docs/dominio.md §7 no pide.
+ */
+function mapearZonaAVistaPublica(zona: ZonaCobertura): ZonaCoberturaVistaPublica {
+  if (zona.tipo === "barrios") {
+    return { tipo: "barrios", barrioIds: zona.barrioIds };
+  }
+  return {
+    tipo: "radio",
+    // No nulo en la practica: guardarZona siempre escribe radioKm cuando
+    // tipo = "radio" (profesionales.service.ts).
     radioKm: zona.radioKm ?? 0,
   };
 }

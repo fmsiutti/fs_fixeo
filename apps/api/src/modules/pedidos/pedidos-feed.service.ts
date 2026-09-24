@@ -15,6 +15,7 @@ import type {
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { EventosService } from "../eventos/eventos.service.js";
 import { ParametrosService } from "../parametros/parametros.service.js";
+import { puedeRecibirPostulaciones } from "./pedidos.estados.js";
 import {
   mapearPedidoAFeedItemVista,
   mapearPedidoAVistaProfesional,
@@ -153,15 +154,12 @@ export class PedidosFeedService {
       this.parametros.getNumero("seleccionables_max_por_pedido"),
       this.parametros.getNumero("postulaciones_max_por_pedido"),
     ]);
-    const visibleAbierto = pedido.estado === "publicado" || pedido.estado === "con_postulaciones";
     // docs/dominio.md §6: "sigue en el feed mientras quede cupo de elegibles
     // Y de postulaciones" (revision de codigo del slice 5: antes solo se
-    // miraba el cupo de elegibles). Sale si falta cualquiera de los dos.
-    const tieneCupoLibre =
-      pedido.cantidadContactos < seleccionablesMax &&
-      pedido.cantidadPostulaciones < postulacionesMax;
-    const visibleConCupo = pedido.estado === "contacto_habilitado" && tieneCupoLibre;
-    if (!visibleAbierto && !visibleConCupo) {
+    // miraba el cupo de elegibles). Misma regla que usa PostulacionesService
+    // para aceptar el POST (pedidos.estados.ts).
+    const visible = puedeRecibirPostulaciones(pedido, seleccionablesMax, postulacionesMax);
+    if (!visible) {
       if (pedido.estado === "contacto_habilitado") {
         // Estado correcto pero sin cupo de ninguno de los dos: es
         // efectivamente "el cliente ya completo su eleccion".
@@ -197,7 +195,10 @@ export class PedidosFeedService {
       distanciaKm,
       postulacionesCupoLleno: pedido.cantidadPostulaciones >= postulacionesMax,
       yaEligioAlguien: pedido.cantidadContactos > 0,
-      seleccionablesLibres: seleccionablesMax - pedido.cantidadContactos,
+      // Math.max(0, ...): mismo resguardo que pedidos.service.ts (revision de
+      // codigo del slice 6) para que un ajuste futuro del parametro nunca de
+      // un numero negativo.
+      seleccionablesLibres: Math.max(0, seleccionablesMax - pedido.cantidadContactos),
       verificacionAprobada: perfil.estadoVerificacion === "aprobada",
     });
   }

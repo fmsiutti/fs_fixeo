@@ -52,8 +52,14 @@ export function FeedTrabajosPage() {
 
   return (
     <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
-      <header>
+      <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-teal-800">Trabajos</h1>
+        <Link
+          to="/postulaciones"
+          className="min-h-11 text-sm font-semibold text-teal-800 underline"
+        >
+          Mis postulaciones
+        </Link>
       </header>
 
       {mostrarBannerVerificacion && (

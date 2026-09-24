@@ -1,11 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
-import type { PedidoVista, UsuarioVista } from "@fixeo/shared";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PedidoVista, PostulacionVistaCliente, UsuarioVista } from "@fixeo/shared";
 import { PedidoDetallePage } from "./PedidoDetallePage";
 import { SesionContext, type SesionContextValor } from "../../auth/SesionContext";
 import * as api from "../api";
+import * as postulacionesApi from "../../postulaciones/api";
 
 function usuarioDeEjemplo(): UsuarioVista {
   return {
@@ -46,13 +48,44 @@ function pedidoDeEjemplo(overrides: Partial<PedidoVista> = {}): PedidoVista {
     fotos: [],
     vistas: 0,
     cantidadPostulaciones: 0,
+    postulacionesCupoLleno: false,
+    cantidadContactos: 0,
+    seleccionablesLibres: 3,
     creadoEn: new Date("2026-01-01T00:00:00.000Z").toISOString(),
     ...overrides,
   };
 }
 
-function renderPage(pedido: PedidoVista) {
+function postulacionClienteDeEjemplo(
+  overrides: Partial<PostulacionVistaCliente> = {},
+): PostulacionVistaCliente {
+  return {
+    id: "postulacion-1",
+    profesional: {
+      id: "profesional-1",
+      nombre: "Juan",
+      apellido: "Pérez",
+      fotoUrl: null,
+      promedioResenias: null,
+      cantidadResenias: 0,
+      aniosExperiencia: 5,
+    },
+    mensaje: "Puedo pasar mañana a la mañana a revisar la canilla",
+    estimacion: { aDefinir: false, minimo: 1000, maximo: 2000 },
+    disponibilidad: null,
+    estado: "enviada",
+    puedeDescartar: true,
+    puedeRevertirDescarte: false,
+    enviadaEn: new Date("2026-01-02T00:00:00.000Z").toISOString(),
+    ...overrides,
+  };
+}
+
+function renderPage(pedido: PedidoVista, postulaciones: PostulacionVistaCliente[] | null = null) {
   vi.spyOn(api, "obtenerPedido").mockResolvedValue(pedido);
+  if (postulaciones !== null) {
+    vi.spyOn(postulacionesApi, "obtenerPostulacionesDePedido").mockResolvedValue(postulaciones);
+  }
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -79,6 +112,10 @@ function renderPage(pedido: PedidoVista) {
 }
 
 describe("PedidoDetallePage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("muestra el boton de cancelar cuando el pedido esta publicado", async () => {
     renderPage(pedidoDeEjemplo({ estado: "publicado" }));
 
@@ -134,7 +171,9 @@ describe("PedidoDetallePage", () => {
   });
 
   it("no muestra el link de editar en cuanto llega la primera postulacion", async () => {
-    renderPage(pedidoDeEjemplo({ estado: "publicado", cantidadPostulaciones: 1 }));
+    renderPage(pedidoDeEjemplo({ estado: "publicado", cantidadPostulaciones: 1 }), [
+      postulacionClienteDeEjemplo(),
+    ]);
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /cancelar pedido/i })).toBeInTheDocument(),
@@ -147,5 +186,110 @@ describe("PedidoDetallePage", () => {
 
     await waitFor(() => expect(screen.getByText(/lo estamos revisando/i)).toBeInTheDocument());
     expect(screen.queryByRole("link", { name: /editar pedido/i })).not.toBeInTheDocument();
+  });
+
+  // CL-08 (docs/pantallas.md): mismo pedido, distinto momento (ya tiene postulaciones).
+  describe("CL-08 · postulaciones del pedido", () => {
+    it("lista las postulaciones cuando el pedido ya tiene alguna", async () => {
+      renderPage(pedidoDeEjemplo({ estado: "con_postulaciones", cantidadPostulaciones: 1 }), [
+        postulacionClienteDeEjemplo(),
+      ]);
+
+      expect(await screen.findByText(/juan pérez/i)).toBeInTheDocument();
+      expect(screen.getByText(/puedo pasar mañana a la mañana/i)).toBeInTheDocument();
+    });
+
+    it("no insinua que faltan postulaciones cuando hay una sola", async () => {
+      renderPage(pedidoDeEjemplo({ estado: "con_postulaciones", cantidadPostulaciones: 1 }), [
+        postulacionClienteDeEjemplo(),
+      ]);
+
+      await screen.findByText(/juan pérez/i);
+      expect(screen.queryByText(/más postulaciones/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/en camino/i)).not.toBeInTheDocument();
+    });
+
+    it("muestra la nota de cupo lleno cuando el backend informa postulacionesCupoLleno", async () => {
+      renderPage(
+        pedidoDeEjemplo({
+          estado: "con_postulaciones",
+          cantidadPostulaciones: 8,
+          postulacionesCupoLleno: true,
+        }),
+        [postulacionClienteDeEjemplo()],
+      );
+
+      expect(await screen.findByText(/alcanzó el máximo de postulaciones/i)).toBeInTheDocument();
+    });
+
+    it("muestra la nota D2 cuando ya hubo una eleccion y todavia queda lugar", async () => {
+      renderPage(
+        pedidoDeEjemplo({
+          estado: "contacto_habilitado",
+          cantidadPostulaciones: 2,
+          cantidadContactos: 1,
+          seleccionablesLibres: 2,
+        }),
+        [
+          postulacionClienteDeEjemplo({ estado: "seleccionada", puedeDescartar: false }),
+          postulacionClienteDeEjemplo({ id: "postulacion-2" }),
+        ],
+      );
+
+      expect(
+        await screen.findByText(/ya elegiste a un profesional, todavía quedan 2 lugares/i),
+      ).toBeInTheDocument();
+    });
+
+    it("no muestra la nota D2 cuando ya se completo el cupo de elegibles", async () => {
+      renderPage(
+        pedidoDeEjemplo({
+          estado: "contacto_habilitado",
+          cantidadPostulaciones: 3,
+          cantidadContactos: 3,
+          seleccionablesLibres: 0,
+        }),
+        [
+          postulacionClienteDeEjemplo({ estado: "seleccionada", puedeDescartar: false }),
+          postulacionClienteDeEjemplo({ id: "postulacion-2" }),
+        ],
+      );
+
+      await screen.findAllByText(/juan pérez/i);
+      expect(
+        screen.queryByText(/ya elegiste a un profesional, todavía quedan/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it("descarta una postulacion y permite deshacer dentro de la ventana", async () => {
+      vi.spyOn(postulacionesApi, "descartarPostulacion").mockResolvedValue(
+        postulacionClienteDeEjemplo({
+          estado: "descartada",
+          puedeDescartar: false,
+          puedeRevertirDescarte: true,
+        }),
+      );
+      const usuario = userEvent.setup();
+      renderPage(pedidoDeEjemplo({ estado: "con_postulaciones", cantidadPostulaciones: 1 }), [
+        postulacionClienteDeEjemplo(),
+      ]);
+
+      await usuario.click(await screen.findByRole("button", { name: /^descartar$/i }));
+      await usuario.click(screen.getByRole("button", { name: /sí, descartar/i }));
+
+      await waitFor(() => expect(postulacionesApi.descartarPostulacion).toHaveBeenCalled());
+    });
+
+    it("muestra el boton de deshacer cuando la postulacion esta dentro de la ventana de reversion", async () => {
+      renderPage(pedidoDeEjemplo({ estado: "con_postulaciones", cantidadPostulaciones: 1 }), [
+        postulacionClienteDeEjemplo({
+          estado: "descartada",
+          puedeDescartar: false,
+          puedeRevertirDescarte: true,
+        }),
+      ]);
+
+      expect(await screen.findByRole("button", { name: /deshacer descarte/i })).toBeInTheDocument();
+    });
   });
 });

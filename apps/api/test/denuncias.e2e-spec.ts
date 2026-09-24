@@ -171,15 +171,35 @@ describe("Denuncias (PR-03: canal de denuncia sobre un pedido, e2e)", () => {
     expect(respuestaPedidoInexistente.body.codigo).toBe("no_encontrado");
   });
 
-  it("rechaza tipoObjeto distinto de 'pedido' (todavia no soportado)", async () => {
+  it("rechaza tipoObjeto 'resenia' (todavia no tiene pantalla, slice 8)", async () => {
     const cliente = await loginComoCliente(`${PREFIJO_TELEFONO}010`);
 
     const respuesta = await request(app.getHttpServer())
       .post("/denuncias")
       .set("Authorization", `Bearer ${cliente.accessToken}`)
-      .send({ tipoObjeto: "perfil", objetoId: randomUUID(), motivo: "Contenido inadecuado" })
+      .send({ tipoObjeto: "resenia", objetoId: randomUUID(), motivo: "Contenido inadecuado" })
       .expect(400);
     expect(respuesta.body.codigo).toBe("validacion");
+  });
+
+  // Slice 6: CL-09 y PR-05/CL-08 desbloquean "perfil" y "postulacion" (antes
+  // rechazados sin importar si el objeto existia).
+  it("rechaza 'perfil' y 'postulacion' inexistentes con 404, no con 400 generico", async () => {
+    const cliente = await loginComoCliente(`${PREFIJO_TELEFONO}012`);
+
+    const respuestaPerfil = await request(app.getHttpServer())
+      .post("/denuncias")
+      .set("Authorization", `Bearer ${cliente.accessToken}`)
+      .send({ tipoObjeto: "perfil", objetoId: randomUUID(), motivo: "Contenido inadecuado" })
+      .expect(404);
+    expect(respuestaPerfil.body.codigo).toBe("no_encontrado");
+
+    const respuestaPostulacion = await request(app.getHttpServer())
+      .post("/denuncias")
+      .set("Authorization", `Bearer ${cliente.accessToken}`)
+      .send({ tipoObjeto: "postulacion", objetoId: randomUUID(), motivo: "Contenido inadecuado" })
+      .expect(404);
+    expect(respuestaPostulacion.body.codigo).toBe("no_encontrado");
   });
 
   it("limita la cantidad de denuncias por unidad de tiempo (revision de codigo del slice 5)", async () => {

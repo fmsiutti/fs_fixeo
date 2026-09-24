@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import type { RegistrarEvento } from "@fixeo/shared";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import type { RegistrarEvento, RegistrarPostulacionIniciada } from "@fixeo/shared";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 
@@ -61,6 +61,34 @@ export class EventosService {
       zona: barrio?.nombre ?? null,
       rol: "cliente",
       metadata: datos.paso ? { paso: datos.paso } : undefined,
+    });
+  }
+
+  /**
+   * PR-04 (docs/dominio.md §10): lo dispara el profesional al abrir el
+   * formulario de postulacion (no al enviarla: eso ya es
+   * `postulacion_enviada`, en PostulacionesService). Resuelve categoria/zona
+   * reales contra el pedido, mismo criterio que `registrarDelCliente`.
+   */
+  async registrarPostulacionIniciada(
+    usuarioId: string,
+    datos: RegistrarPostulacionIniciada,
+  ): Promise<void> {
+    const pedido = await this.prisma.pedido.findUnique({
+      where: { id: datos.pedidoId },
+      include: { categoria: { select: { slug: true } }, barrio: { select: { nombre: true } } },
+    });
+    if (!pedido) {
+      throw new NotFoundException({ codigo: "no_encontrado", mensaje: "El pedido no existe" });
+    }
+
+    await this.registrar({
+      tipo: "postulacion_iniciada",
+      categoria: pedido.categoria.slug,
+      zona: pedido.barrio.nombre,
+      rol: "profesional",
+      usuarioId,
+      pedidoId: pedido.id,
     });
   }
 }

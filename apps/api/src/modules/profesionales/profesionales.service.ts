@@ -1,13 +1,24 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import type {
   ArmarPerfil,
+  CrearPlantillaMensaje,
   GuardarOficios,
   PerfilProfesionalVistaPropia,
+  PerfilProfesionalVistaPublica,
+  PlantillaMensajeVista,
   ZonaCoberturaInput,
 } from "@fixeo/shared";
+import { PLANTILLAS_MENSAJE_MAX_POR_PERFIL } from "@fixeo/shared";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
-import type { PerfilProfesional } from "../../generated/prisma/client.js";
-import { mapearPerfilAVistaPropia } from "./profesionales.vistas.js";
+import type { PerfilProfesional, Usuario } from "../../generated/prisma/client.js";
+import { EventosService } from "../eventos/eventos.service.js";
+import { mapearPerfilAVistaPropia, mapearPerfilAVistaPublica } from "./profesionales.vistas.js";
 
 const PERFIL_NO_ARMADO = {
   codigo: "no_encontrado" as const,
@@ -22,7 +33,12 @@ const INCLUDE_VISTA_PROPIA = {
 
 @Injectable()
 export class ProfesionalesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProfesionalesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventos: EventosService,
+  ) {}
 
   async obtenerPropio(usuarioId: string): Promise<PerfilProfesionalVistaPropia> {
     const perfil = await this.prisma.perfilProfesional.findUnique({
@@ -186,6 +202,103 @@ export class ProfesionalesService {
       data: { pausado: !perfil.pausado },
     });
     return this.obtenerPropio(usuarioId);
+  }
+
+  /**
+   * CL-09: perfil publico, visible por cualquier usuario autenticado (no solo
+   * el cliente que evalua postulaciones). `usuario` es quien mira, para
+   * registrar el evento con su rol activo real.
+   */
+  async obtenerPerfilPublico(
+    usuario: Usuario,
+    perfilId: string,
+  ): Promise<PerfilProfesionalVistaPublica> {
+    const perfil = await this.prisma.perfilProfesional.findUnique({
+      where: { id: perfilId },
+      include: {
+        usuario: { select: { nombre: true, apellido: true, fotoUrl: true } },
+        oficios: { include: { categoria: true }, orderBy: { creadoEn: "asc" } },
+        zonaCobertura: true,
+      },
+    });
+    if (!perfil) {
+      throw new NotFoundException({ codigo: "no_encontrado", mensaje: "El perfil no existe" });
+    }
+
+    // Importante 3 (revision de codigo del slice 6): CL-09 se puede abrir
+    // desde varios lugares (feed, un pedido puntual, un link directo), sin un
+    // contexto real de categoria/zona en este endpoint. Antes se usaba el
+    // slug del primer oficio del perfil como "categoria", pero eso no tiene
+    // relacion real con la visita (podria ser un cliente mirando el perfil
+    // por su oficio de plomeria y el perfil tener 3 oficios mas). Regla no
+    // negociable #8 pide categoria/zona/rol, pero no obliga a inventar una
+    // categoria falsa: se registran en null, igual que otros eventos sin
+    // contexto suficiente en este proyecto.
+    await this.registrarEventoSeguro({
+      tipo: "perfil_profesional_visto",
+      categoria: null,
+      zona: null,
+      rol: usuario.rolActivo,
+      usuarioId: usuario.id,
+    });
+
+    return mapearPerfilAVistaPublica(perfil);
+  }
+
+  /** PR-04/PR-07: plantillas de mensaje propias, mas recientes primero. */
+  async listarPlantillas(usuarioId: string): Promise<PlantillaMensajeVista[]> {
+    const perfil = await this.buscarPerfilOrThrow(usuarioId);
+    const plantillas = await this.prisma.plantillaMensaje.findMany({
+      where: { perfilId: perfil.id },
+      orderBy: { creadoEn: "desc" },
+    });
+    return plantillas.map((plantilla) => ({
+      id: plantilla.id,
+      texto: plantilla.texto,
+      creadoEn: plantilla.creadoEn.toISOString(),
+    }));
+  }
+
+  async crearPlantilla(
+    usuarioId: string,
+    datos: CrearPlantillaMensaje,
+  ): Promise<PlantillaMensajeVista> {
+    const perfil = await this.buscarPerfilOrThrow(usuarioId);
+
+    const cantidad = await this.prisma.plantillaMensaje.count({ where: { perfilId: perfil.id } });
+    if (cantidad >= PLANTILLAS_MENSAJE_MAX_POR_PERFIL) {
+      throw new BadRequestException({
+        codigo: "validacion",
+        mensaje: `Ya tenés el máximo de ${PLANTILLAS_MENSAJE_MAX_POR_PERFIL} plantillas`,
+      });
+    }
+
+    const plantilla = await this.prisma.plantillaMensaje.create({
+      data: { perfilId: perfil.id, texto: datos.texto },
+    });
+    return { id: plantilla.id, texto: plantilla.texto, creadoEn: plantilla.creadoEn.toISOString() };
+  }
+
+  async borrarPlantilla(usuarioId: string, plantillaId: string): Promise<void> {
+    const perfil = await this.buscarPerfilOrThrow(usuarioId);
+    const plantilla = await this.prisma.plantillaMensaje.findUnique({
+      where: { id: plantillaId },
+    });
+    if (!plantilla || plantilla.perfilId !== perfil.id) {
+      throw new NotFoundException({ codigo: "no_encontrado", mensaje: "La plantilla no existe" });
+    }
+    await this.prisma.plantillaMensaje.delete({ where: { id: plantillaId } });
+  }
+
+  /** La analitica nunca puede tumbar una accion de negocio ya resuelta (mismo criterio que PedidosService). */
+  private async registrarEventoSeguro(
+    datos: Parameters<EventosService["registrar"]>[0],
+  ): Promise<void> {
+    try {
+      await this.eventos.registrar(datos);
+    } catch (error) {
+      this.logger.warn(`No se pudo registrar el evento "${datos.tipo}": ${String(error)}`);
+    }
   }
 
   private async buscarPerfilOrThrow(usuarioId: string): Promise<PerfilProfesional> {

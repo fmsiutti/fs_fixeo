@@ -23,3 +23,14 @@ export const registrarEventoSchema = z.object({
 });
 
 export type RegistrarEvento = z.infer<typeof registrarEventoSchema>;
+
+// PR-04 (revision de codigo del slice 6): a diferencia del asistente de
+// pedido, este evento lo dispara un profesional ya autenticado, asi que no
+// comparte el endpoint publico de arriba (que ademas fuerza rol="cliente").
+// Solo necesita el pedido: el backend resuelve categoria/zona reales contra
+// el, igual que ya hace `registrarDelCliente`.
+export const registrarPostulacionIniciadaSchema = z.object({
+  pedidoId: z.string().uuid(),
+});
+
+export type RegistrarPostulacionIniciada = z.infer<typeof registrarPostulacionIniciadaSchema>;

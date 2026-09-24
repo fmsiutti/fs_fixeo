@@ -17,6 +17,25 @@ const MOTIVOS_DENUNCIA_PEDIDO = [
   "Otro motivo",
 ] as const;
 
+// CL-09: "denunciar" un perfil de profesional.
+const MOTIVOS_DENUNCIA_PERFIL = [
+  "Perfil falso o suplantación de identidad",
+  "Contenido inapropiado en el perfil",
+  "Comportamiento abusivo o irrespetuoso",
+  "Spam o publicidad",
+  "Otro motivo",
+] as const;
+
+const TITULOS_POR_TIPO: Partial<Record<TipoObjetoDenuncia, string>> = {
+  pedido: "Denunciar este pedido",
+  perfil: "Denunciar este perfil",
+};
+
+const MOTIVOS_POR_TIPO: Partial<Record<TipoObjetoDenuncia, readonly string[]>> = {
+  pedido: MOTIVOS_DENUNCIA_PEDIDO,
+  perfil: MOTIVOS_DENUNCIA_PERFIL,
+};
+
 const normalizarDetalle = (valor: string): string | undefined => (valor === "" ? undefined : valor);
 
 interface FormularioDenunciaProps {
@@ -26,13 +45,23 @@ interface FormularioDenunciaProps {
   onCancelar: () => void;
 }
 
-/** PR-03 "denunciar" (unico origen habilitado en este slice, docs/dominio.md §12/§15). */
+/**
+ * CO-07 "denunciar" (docs/dominio.md §15: "Canal de denuncia en perfil,
+ * pedido y postulacion"). Titulo y motivos varian segun `tipoObjeto`; ambos
+ * mapas son parciales porque `postulacion` y `resenia` (los otros dos tipos
+ * del contrato) todavia no tienen ninguna pantalla que dispare esta denuncia
+ * (regla anti-sobreingenieria: no se prepara codigo sin una pantalla real que
+ * lo use).
+ */
 export function FormularioDenuncia({
   tipoObjeto,
   objetoId,
   onExito,
   onCancelar,
 }: FormularioDenunciaProps) {
+  const titulo = TITULOS_POR_TIPO[tipoObjeto] ?? "Denunciar";
+  const motivos = MOTIVOS_POR_TIPO[tipoObjeto] ?? MOTIVOS_DENUNCIA_PEDIDO;
+
   const form = useForm<CrearDenuncia>({
     resolver: zodResolver(crearDenunciaSchema),
     defaultValues: { tipoObjeto, objetoId, motivo: "", detalle: undefined },
@@ -49,7 +78,7 @@ export function FormularioDenuncia({
       onSubmit={form.handleSubmit((datos) => mutacion.mutate(datos))}
       className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4"
     >
-      <h2 className="font-semibold text-slate-900">Denunciar este pedido</h2>
+      <h2 className="font-semibold text-slate-900">{titulo}</h2>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="denuncia-motivo" className="text-sm font-medium text-slate-700">
@@ -63,7 +92,7 @@ export function FormularioDenuncia({
           {...form.register("motivo")}
         >
           <option value="">Elegí un motivo</option>
-          {MOTIVOS_DENUNCIA_PEDIDO.map((motivo) => (
+          {motivos.map((motivo) => (
             <option key={motivo} value={motivo}>
               {motivo}
             </option>

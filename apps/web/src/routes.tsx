@@ -16,6 +16,9 @@ import { MiPerfilPage } from "./features/perfil/pages/MiPerfilPage";
 import { ColaVerificacionesPage } from "./features/admin/pages/ColaVerificacionesPage";
 import { FeedTrabajosPage } from "./features/feed/pages/FeedTrabajosPage";
 import { FeedDetalleTrabajoPage } from "./features/feed/pages/FeedDetalleTrabajoPage";
+import { PostularmePage } from "./features/postulaciones/pages/PostularmePage";
+import { MisPostulacionesPage } from "./features/postulaciones/pages/MisPostulacionesPage";
+import { PerfilProfesionalPublicoPage } from "./features/profesionales/pages/PerfilProfesionalPublicoPage";
 import { NoEncontradaPage } from "./features/comunes/pages/NoEncontradaPage";
 import { RutaConRol } from "./components/RutaConRol";
 
@@ -99,6 +102,26 @@ export const router = createBrowserRouter([
         <FeedDetalleTrabajoPage />
       </RutaConRol>
     ),
+  },
+  {
+    path: "/trabajos/:id/postularme",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <PostularmePage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/postulaciones",
+    element: (
+      <RutaConRol roles={["profesional"]}>
+        <MisPostulacionesPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/profesionales/:id",
+    element: <PerfilProfesionalPublicoPage />,
   },
   {
     path: "/admin/verificaciones",

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "@jest/globals";
 import { perfilProfesionalVistaPropiaSchema } from "@fixeo/shared";
 import type { Verificacion } from "../../generated/prisma/client.js";
-import type { OficioConCategoria, PerfilConRelaciones } from "./profesionales.vistas.js";
-import { mapearPerfilAVistaPropia } from "./profesionales.vistas.js";
+import type {
+  OficioConCategoria,
+  PerfilConRelaciones,
+  PerfilConRelacionesPublicas,
+} from "./profesionales.vistas.js";
+import { mapearPerfilAVistaPropia, mapearPerfilAVistaPublica } from "./profesionales.vistas.js";
 
 function crearVerificacion(overrides: Partial<Verificacion> = {}): Verificacion {
   return {
@@ -168,5 +172,70 @@ describe("mapearPerfilAVistaPropia", () => {
       centroLng: -58.4,
       radioKm: 5,
     });
+  });
+});
+
+function crearPerfilPublico(
+  overrides: Partial<PerfilConRelacionesPublicas> = {},
+): PerfilConRelacionesPublicas {
+  return {
+    ...crearPerfil(),
+    usuario: { nombre: "Juan", apellido: "Pérez", fotoUrl: null },
+    ...overrides,
+  } as PerfilConRelacionesPublicas;
+}
+
+describe("mapearPerfilAVistaPublica", () => {
+  // CL-09 (revision de codigo del slice 6, hallazgo 9): a diferencia de
+  // mapearPerfilAVistaPropia, la zona por radio de la vista publica nunca
+  // expone las coordenadas exactas del profesional, solo el radio en km.
+  it("mapea zona por radio sin centroLat ni centroLng", () => {
+    const vista = mapearPerfilAVistaPublica(
+      crearPerfilPublico({
+        zonaCobertura: {
+          id: "55555555-5555-5555-5555-555555555555",
+          perfilId: "22222222-2222-2222-2222-222222222222",
+          tipo: "radio",
+          barrioIds: [],
+          centroLat: -34.6,
+          centroLng: -58.4,
+          radioKm: 5,
+          actualizadoEn: new Date("2026-01-01T00:00:00.000Z"),
+        },
+      }),
+    );
+
+    expect(vista.zonaCobertura).toEqual({ tipo: "radio", radioKm: 5 });
+    expect(vista.zonaCobertura).not.toHaveProperty("centroLat");
+    expect(vista.zonaCobertura).not.toHaveProperty("centroLng");
+  });
+
+  it("mapea zona por barrios igual que la vista propia", () => {
+    const vista = mapearPerfilAVistaPublica(
+      crearPerfilPublico({
+        zonaCobertura: {
+          id: "55555555-5555-5555-5555-555555555555",
+          perfilId: "22222222-2222-2222-2222-222222222222",
+          tipo: "barrios",
+          barrioIds: ["66666666-6666-6666-6666-666666666666"],
+          centroLat: null,
+          centroLng: null,
+          radioKm: null,
+          actualizadoEn: new Date("2026-01-01T00:00:00.000Z"),
+        },
+      }),
+    );
+
+    expect(vista.zonaCobertura).toEqual({
+      tipo: "barrios",
+      barrioIds: ["66666666-6666-6666-6666-666666666666"],
+    });
+  });
+
+  it("nunca expone usuarioId ni telefono", () => {
+    const vista = mapearPerfilAVistaPublica(crearPerfilPublico());
+
+    expect(vista).not.toHaveProperty("usuarioId");
+    expect(JSON.stringify(vista)).not.toContain("telefono");
   });
 });

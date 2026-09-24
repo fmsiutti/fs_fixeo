@@ -2,6 +2,12 @@ import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSesion } from "../../auth/useSesion";
+import {
+  obtenerPostulacionesDePedido,
+  postulacionesDePedidoQueryKey,
+} from "../../postulaciones/api";
+import { TarjetaPostulacionCliente } from "../../postulaciones/components/TarjetaPostulacionCliente";
+import { pluralizarLugares } from "../../feed/lib/formato";
 import { cancelarPedido, misPedidosQueryKey, obtenerPedido, pedidoQueryKey } from "../api";
 import { ETIQUETAS_ESTADO_PEDIDO, ETIQUETAS_FRANJA, ETIQUETAS_URGENCIA } from "../etiquetas";
 import { Button } from "../../../components/ui/Button";
@@ -45,6 +51,15 @@ export function PedidoDetallePage() {
       setErrorCancelar(null);
     },
     onError: (error) => setErrorCancelar(textoErrorCancelar(error)),
+  });
+
+  // CL-08: mismo pedido, momento distinto ("ya tiene postulaciones"). Se
+  // activa recien cuando el pedido las tiene, para no pedirle a la api algo
+  // que CL-07 (0 postulaciones) no necesita.
+  const postulacionesQuery = useQuery({
+    queryKey: postulacionesDePedidoQueryKey(id ?? ""),
+    queryFn: () => obtenerPostulacionesDePedido(id ?? ""),
+    enabled: Boolean(usuario) && Boolean(id) && (pedidoQuery.data?.cantidadPostulaciones ?? 0) > 0,
   });
 
   if (!usuario) {
@@ -206,6 +221,69 @@ export function PedidoDetallePage() {
                 )}
               </div>
             </>
+          )}
+
+          {/* CL-08: mismo pedido, distinto momento. Se muestra en cuanto hay
+              postulaciones, sin importar el estado (con_postulaciones o
+              contacto_habilitado si ya hubo seleccion en un slice futuro). */}
+          {pedido.cantidadPostulaciones > 0 && (
+            <section className="flex flex-col gap-4">
+              <h2 className="text-lg font-bold text-slate-900">Postulaciones</h2>
+
+              {/*
+                D2 (docs/dominio.md §4/§12): "las demas siguen elegibles y se
+                muestra cuantos lugares quedan". El backend ya calcula
+                `cantidadContactos` y `seleccionablesLibres` (CL-08, revision
+                de codigo del slice 6): el aviso solo aparece cuando hubo al
+                menos una eleccion Y todavia queda lugar, para no mentir
+                cuando el cupo de elegibles ya se completo.
+              */}
+              {pedido.cantidadContactos > 0 && pedido.seleccionablesLibres > 0 && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  {(() => {
+                    // CL-08 es la pantalla del dueno del pedido: voseo en
+                    // primera persona (a diferencia del mismo aviso en PR-03,
+                    // que le habla al profesional sobre "el cliente"), y D2
+                    // pide mostrar cuantos lugares quedan, no solo que quedan.
+                    const { sustantivo, verbo } = pluralizarLugares(pedido.seleccionablesLibres);
+                    return `Ya elegiste a un profesional, todavía ${verbo} ${sustantivo}.`;
+                  })()}
+                </p>
+              )}
+
+              {pedido.postulacionesCupoLleno && (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                  Este pedido alcanzó el máximo de postulaciones.
+                </p>
+              )}
+
+              {postulacionesQuery.isPending && <Spinner etiqueta="Cargando las postulaciones" />}
+
+              {postulacionesQuery.isError && (
+                <div className="flex flex-col items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  <p role="alert">No pudimos cargar las postulaciones.</p>
+                  <button
+                    type="button"
+                    className="min-h-11 font-semibold underline"
+                    onClick={() => postulacionesQuery.refetch()}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+
+              {postulacionesQuery.data && postulacionesQuery.data.length > 0 && (
+                <ul className="flex flex-col gap-3">
+                  {postulacionesQuery.data.map((postulacion) => (
+                    <TarjetaPostulacionCliente
+                      key={postulacion.id}
+                      pedidoId={pedido.id}
+                      postulacion={postulacion}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
 
           {ESTADOS_CANCELABLES.includes(pedido.estado) && (

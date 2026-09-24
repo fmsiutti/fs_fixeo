@@ -8,3 +8,4 @@ export * from "./pedidos.js";
 export * from "./eventos.js";
 export * from "./profesionales.js";
 export * from "./denuncias.js";
+export * from "./postulaciones.js";

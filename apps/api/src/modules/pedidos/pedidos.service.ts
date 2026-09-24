@@ -33,6 +33,7 @@ import { EventosService } from "../eventos/eventos.service.js";
 import { ParametrosService } from "../parametros/parametros.service.js";
 import { transicionar } from "./pedidos.estados.js";
 import { mapearPedidoAResumenVista, mapearPedidoAVista } from "./pedidos.vistas.js";
+import type { PedidoConRelaciones } from "./pedidos.vistas.js";
 
 // docs/dominio.md §5: cuentan para el cupo de pedidos activos por cliente.
 // `borrador` no esta porque este slice nunca persiste un Pedido en ese
@@ -251,7 +252,7 @@ export class PedidosService {
       await this.encolarAvisoMatchingSeguro(pedidoCreado.id);
     }
 
-    return mapearPedidoAVista(pedidoCreado);
+    return this.mapearAVistaConCupo(pedidoCreado);
   }
 
   /**
@@ -279,6 +280,27 @@ export class PedidosService {
     }
   }
 
+  /**
+   * CL-07/CL-08 (revision de codigo del slice 6): calcula los mismos 3 campos
+   * de cupo que ya expone PedidoVistaProfesional (PR-03), para que el dueno
+   * del pedido nunca vea un numero inventado ni desincronizado de
+   * `postulaciones_max_por_pedido` / `seleccionables_max_por_pedido`.
+   */
+  private async mapearAVistaConCupo(pedido: PedidoConRelaciones): Promise<PedidoVista> {
+    const [seleccionablesMax, postulacionesMax] = await Promise.all([
+      this.parametros.getNumero("seleccionables_max_por_pedido"),
+      this.parametros.getNumero("postulaciones_max_por_pedido"),
+    ]);
+    return mapearPedidoAVista(pedido, {
+      postulacionesCupoLleno: pedido.cantidadPostulaciones >= postulacionesMax,
+      cantidadContactos: pedido.cantidadContactos,
+      // Math.max(0, ...): si durante el piloto se baja seleccionables_max_por_pedido
+      // por debajo de la cantidad de contactos que ya tiene un pedido viejo,
+      // esto no puede dar negativo (revision de codigo del slice 6).
+      seleccionablesLibres: Math.max(0, seleccionablesMax - pedido.cantidadContactos),
+    });
+  }
+
   async listarPropios(usuarioId: string): Promise<PedidoResumenVista[]> {
     const pedidos = await this.prisma.pedido.findMany({
       where: { clienteId: usuarioId, estado: { in: ESTADOS_ACTIVOS_CLIENTE } },
@@ -298,7 +320,7 @@ export class PedidosService {
     if (!pedido || pedido.clienteId !== usuarioId) {
       throw new NotFoundException({ codigo: "no_encontrado", mensaje: "El pedido no existe" });
     }
-    return mapearPedidoAVista(pedido);
+    return this.mapearAVistaConCupo(pedido);
   }
 
   // Nota para el slice de matching/feed (§6): esto permite subir `urgencia` a
@@ -369,7 +391,7 @@ export class PedidosService {
       where: { id: pedidoId },
       include: INCLUDE_VISTA_COMPLETA,
     });
-    return mapearPedidoAVista(actualizado);
+    return this.mapearAVistaConCupo(actualizado);
   }
 
   async cancelar(usuarioId: string, pedidoId: string): Promise<PedidoVista> {
@@ -386,7 +408,7 @@ export class PedidosService {
       where: { id: pedidoId },
       include: INCLUDE_VISTA_COMPLETA,
     });
-    return mapearPedidoAVista(actualizado);
+    return this.mapearAVistaConCupo(actualizado);
   }
 
   private async verificarFotos(
