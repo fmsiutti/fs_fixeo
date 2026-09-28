@@ -38,12 +38,14 @@ model Usuario {
   creadoEn     DateTime      @default(now()) @map("creado_en")
   ultimoAcceso DateTime?     @map("ultimo_acceso")
 
-  refreshTokens     RefreshToken[]
-  pedidos           Pedido[]
-  perfilProfesional PerfilProfesional?
-  accesosDocumento  AccesoDocumento[]
-  denuncias         Denuncia[]
-  reseniasEscritas  Resenia[]
+  refreshTokens         RefreshToken[]
+  pedidos               Pedido[]
+  perfilProfesional     PerfilProfesional?
+  accesosDocumento      AccesoDocumento[]
+  denuncias             Denuncia[]
+  reseniasEscritas      Resenia[]
+  notasInternas         NotaInterna[]      @relation("NotaInternaUsuario")
+  notasInternasEscritas NotaInterna[]      @relation("NotaInternaAutor")
 
   @@map("usuario")
 }
@@ -538,6 +540,10 @@ model Resenia {
   montoDeclarado       Int?     @map("monto_declarado")
   respuestaProfesional String?  @map("respuesta_profesional")
   publicadaEn          DateTime @default(now()) @map("publicada_en")
+  // D14: moderacion oculta definitivamente una resenia denunciada por datos
+  // personales o agresion. No se borra (docs/dominio.md §8): deja de mostrarse
+  // y de contar en el promedio, pero el registro queda.
+  ocultaPorModeracionEn DateTime? @map("oculta_por_moderacion_en")
 
   pedido      Pedido            @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   contacto    Contacto          @relation(fields: [contactoId], references: [id], onDelete: Restrict)
@@ -559,4 +565,25 @@ model PlantillaMensaje {
 
   @@index([perfilId])
   @@map("plantilla_mensaje")
+}
+
+// docs/pantallas.md AD-03: nota de moderacion/soporte sobre un usuario,
+// visible solo en el back office. onDelete Cascade hacia el usuario sobre el
+// que se escribe (usuarioId): no es un registro de auditoria legal como
+// AccesoDocumento, es contexto operativo que no tiene sentido si la cuenta
+// deja de existir. onDelete Restrict hacia el autor (autorId), mismo
+// criterio que AccesoDocumento.moderadorId: nunca se pierde el rastro de
+// quien escribio la nota.
+model NotaInterna {
+  id        String   @id @default(uuid())
+  usuarioId String   @map("usuario_id")
+  autorId   String   @map("autor_id")
+  texto     String
+  creadaEn  DateTime @default(now()) @map("creada_en")
+
+  usuario Usuario @relation("NotaInternaUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  autor   Usuario @relation("NotaInternaAutor", fields: [autorId], references: [id], onDelete: Restrict)
+
+  @@index([usuarioId])
+  @@map("nota_interna")
 }
