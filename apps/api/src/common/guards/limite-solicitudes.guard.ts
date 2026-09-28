@@ -39,8 +39,15 @@ export class LimiteSolicitudesGuard implements CanActivate {
     );
     if (!opciones) return true;
 
-    const request = context.switchToHttp().getRequest<Request>();
-    const clave = `${context.getHandler().name}:${request.ip}`;
+    // Fix 6, revision de codigo del slice 10: en un endpoint autenticado, el
+    // usuario es mejor clave que la IP (evita que operadores moviles con NAT
+    // compartido choquen entre si). `JwtAuthGuard` siempre corre antes que
+    // este guard (guard de clase antes que guard de metodo), asi que
+    // `request.usuario` ya esta poblado cuando corresponde; las rutas
+    // publicas (OTP, eventos) siguen usando la IP como fallback.
+    const request = context.switchToHttp().getRequest<Request & { usuario?: { id: string } }>();
+    const identificador = request.usuario?.id ?? request.ip;
+    const clave = `${context.getHandler().name}:${identificador}`;
     const ahora = Date.now();
     this.podarVencidos(opciones.ventanaMs, ahora);
     const contador = this.contadoresPorClave.get(clave);

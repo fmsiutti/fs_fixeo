@@ -5,9 +5,11 @@ import type {
   UsuarioDetalleAdminVista,
   UsuarioVista,
 } from "@fixeo/shared";
+import { LimiteSolicitudes } from "../../common/decorators/limite-solicitudes.decorator.js";
 import { Roles } from "../../common/decorators/roles.decorator.js";
 import { UsuarioActual } from "../../common/decorators/usuario-actual.decorator.js";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard.js";
+import { LimiteSolicitudesGuard } from "../../common/guards/limite-solicitudes.guard.js";
 import { RolesGuard } from "../../common/guards/roles.guard.js";
 import type { Usuario } from "../../generated/prisma/client.js";
 import { CrearNotaInternaDto } from "../usuarios/dto/crear-nota-interna.dto.js";
@@ -54,6 +56,8 @@ export class AdminUsuariosController {
 
   @Post(":id/notas")
   @Roles("moderador")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 60, ventanaMs: 60 * 60 * 1000 })
   crearNota(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,

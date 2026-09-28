@@ -32,6 +32,14 @@ const CODIGO_POR_STATUS: Partial<Record<number, CodigoError>> = {
   [HttpStatus.NOT_FOUND]: "no_encontrado",
   [HttpStatus.CONFLICT]: "conflicto",
   [HttpStatus.TOO_MANY_REQUESTS]: "limite_excedido",
+  // Fix 5, revision de codigo del slice 10: `FileInterceptor` de Nest ya
+  // traduce el error crudo de Multer por `limits.fileSize`
+  // (`.code === "LIMIT_FILE_SIZE"`) a un `PayloadTooLargeException` propio
+  // (`transformException` en @nestjs/platform-express), asi que llega aca
+  // como HttpException con status 413, no al catch-all. Sin esta entrada,
+  // el fallback de mas abajo lo devolvia como "error_interno" por no tener
+  // un codigo mas especifico para 413.
+  [HttpStatus.PAYLOAD_TOO_LARGE]: "validacion",
 };
 
 /**
@@ -87,6 +95,20 @@ export class FiltroErrores implements ExceptionFilter {
       response.status(status).json({
         codigo: CODIGO_POR_STATUS[status] ?? "error_interno",
         mensaje: typeof cuerpo === "string" ? cuerpo : exception.message,
+      });
+      return;
+    }
+
+    // Fix 5 (defensa adicional): si algun dia un error crudo de Multer
+    // (`.code === "LIMIT_FILE_SIZE"`, no una HttpException de Nest) llega
+    // directo aca sin pasar por `transformException` de
+    // @nestjs/platform-express (ver CODIGO_POR_STATUS arriba, que cubre el
+    // camino real de hoy), lo mapeamos igual a 413/"validacion" por
+    // duck-typing, sin agregar `multer` como dependencia nueva.
+    if (exception instanceof Error && (exception as { code?: string }).code === "LIMIT_FILE_SIZE") {
+      response.status(HttpStatus.PAYLOAD_TOO_LARGE).json({
+        codigo: "validacion",
+        mensaje: "El archivo es demasiado grande",
       });
       return;
     }

@@ -20,6 +20,11 @@ import type { Usuario } from "../../generated/prisma/client.js";
 import { SubirDocumentoVerificacionDto } from "./dto/subir-documento-verificacion.dto.js";
 import { VerificacionesService } from "./verificaciones.service.js";
 
+// Techo de Multer (corta el stream apenas lo supera, antes de bufferear todo
+// el archivo): mas generoso que el limite real de negocio (10 MB, abajo en
+// el ParseFilePipe) a proposito, es solo defensa en profundidad de slice 10.
+const TAMANIO_MAXIMO_MULTER_BYTES = 15 * 1024 * 1024;
+
 @UseGuards(JwtAuthGuard)
 @Controller("verificaciones")
 export class VerificacionesController {
@@ -28,7 +33,9 @@ export class VerificacionesController {
   @Post("documentos")
   @UseGuards(LimiteSolicitudesGuard)
   @LimiteSolicitudes({ maximo: 20, ventanaMs: 60_000 })
-  @UseInterceptors(FileInterceptor("documento"))
+  @UseInterceptors(
+    FileInterceptor("documento", { limits: { fileSize: TAMANIO_MAXIMO_MULTER_BYTES } }),
+  )
   subirDocumento(
     @UsuarioActual() usuario: Usuario,
     @UploadedFile(

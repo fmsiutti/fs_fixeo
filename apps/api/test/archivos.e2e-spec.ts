@@ -104,4 +104,28 @@ describe("Archivos: subida y borrado de fotos de borrador (e2e)", () => {
 
     expect(septima.body.codigo).toBe("validacion");
   }, 20_000);
+
+  // Slice 10: FileInterceptor("foto", { limits: { fileSize: 8MB } }). Un
+  // archivo mas grande lo corta multer antes de llegar al handler (y antes
+  // de sharp): el error crudo de Multer (`.code === "LIMIT_FILE_SIZE"`) no es
+  // una HttpException de Nest. Fix 5 (revision de codigo del slice 10):
+  // FiltroErrores lo detecta por duck-typing y responde 413 con codigo
+  // "validacion" en vez de caer al catch-all como 500 "error_interno". No
+  // hace falta una imagen valida: multer cuenta bytes del stream, no le
+  // importa el contenido.
+  it("rechaza una foto de mas de 8MB en vez de aceptarla (fotos_max_bytes)", async () => {
+    const borradorId = randomUUID();
+    const bufferDemasiadoGrande = Buffer.alloc(9 * 1024 * 1024, 1);
+
+    const respuesta = await request(app.getHttpServer())
+      .post("/pedidos/borrador/fotos")
+      .field("borradorId", borradorId)
+      .attach("foto", bufferDemasiadoGrande, {
+        filename: "foto-grande.jpg",
+        contentType: "image/jpeg",
+      })
+      .expect(413);
+
+    expect(respuesta.body.codigo).toBe("validacion");
+  }, 20_000);
 });

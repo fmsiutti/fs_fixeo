@@ -29,10 +29,12 @@ function crearPrismaMock() {
   const prisma: {
     usuario: { update: jest.Mock<(args: unknown) => Promise<Usuario>> };
     refreshToken: { updateMany: jest.Mock<(args: unknown) => Promise<{ count: number }>> };
+    suscripcionPush: { deleteMany: jest.Mock<(args: unknown) => Promise<{ count: number }>> };
     $transaction: jest.Mock<(callback: CallbackTransaccion) => Promise<unknown>>;
   } = {
     usuario: { update: jest.fn() },
     refreshToken: { updateMany: jest.fn() },
+    suscripcionPush: { deleteMany: jest.fn() },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation((callback: CallbackTransaccion) => callback(prisma));
@@ -76,6 +78,9 @@ describe("UsuariosService", () => {
       expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
         where: { usuarioId: "usuario-1", revocadoEn: null },
         data: { revocadoEn: expect.any(Date) },
+      });
+      expect(prisma.suscripcionPush.deleteMany).toHaveBeenCalledWith({
+        where: { usuarioId: "usuario-1" },
       });
       expect(prisma.usuario.update).toHaveBeenCalledWith({
         where: { id: "usuario-1" },

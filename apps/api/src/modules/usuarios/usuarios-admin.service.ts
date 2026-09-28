@@ -302,7 +302,8 @@ export class UsuariosAdminService {
     await this.notificaciones.crearVarias(
       contactos.map((contacto) => ({
         usuarioId: contacto.postulacion.profesional.usuarioId,
-        tipo: "pedido_bloqueado",
+        // Fix 4: tipo propio (el profesional no puede ver /pedidos/:id).
+        tipo: "pedido_bloqueado_elegido",
         objetoId: contacto.pedidoId,
       })),
     );

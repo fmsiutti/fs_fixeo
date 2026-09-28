@@ -269,7 +269,11 @@ describe("UsuariosAdminService.suspender (D15: cascada sobre pedidos y postulaci
       expect.objectContaining({ where: { pedidoId: { in: ["pedido-1", "pedido-2"] } } }),
     );
     expect(notificaciones.crearVarias).toHaveBeenCalledWith([
-      { usuarioId: "profesional-elegido-1", tipo: "pedido_bloqueado", objetoId: "pedido-1" },
+      {
+        usuarioId: "profesional-elegido-1",
+        tipo: "pedido_bloqueado_elegido",
+        objetoId: "pedido-1",
+      },
     ]);
   });
 

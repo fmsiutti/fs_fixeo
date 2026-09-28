@@ -7,9 +7,11 @@ import type {
   PedidoVistaProfesional,
   PostulacionVistaCliente,
 } from "@fixeo/shared";
+import { LimiteSolicitudes } from "../../common/decorators/limite-solicitudes.decorator.js";
 import { Roles } from "../../common/decorators/roles.decorator.js";
 import { UsuarioActual } from "../../common/decorators/usuario-actual.decorator.js";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard.js";
+import { LimiteSolicitudesGuard } from "../../common/guards/limite-solicitudes.guard.js";
 import { RolesGuard } from "../../common/guards/roles.guard.js";
 import type { Usuario } from "../../generated/prisma/client.js";
 import { ContactosService } from "../contactos/contactos.service.js";
@@ -34,6 +36,8 @@ export class PedidosController {
   ) {}
 
   @Post()
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 10, ventanaMs: 60 * 60 * 1000 })
   crear(@UsuarioActual() usuario: Usuario, @Body() dto: CrearPedidoDto): Promise<PedidoVista> {
     return this.pedidosService.crear(usuario.id, dto);
   }
@@ -71,12 +75,16 @@ export class PedidosController {
   }
 
   @Patch(":id/cancelar")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 20, ventanaMs: 60 * 60 * 1000 })
   cancelar(@UsuarioActual() usuario: Usuario, @Param("id") id: string): Promise<PedidoVista> {
     return this.pedidosService.cancelar(usuario.id, id);
   }
 
   // CL-11.
   @Patch(":id/cerrar")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 20, ventanaMs: 60 * 60 * 1000 })
   cerrar(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,
@@ -104,6 +112,8 @@ export class PedidosController {
   }
 
   @Patch(":id")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 20, ventanaMs: 60 * 60 * 1000 })
   editar(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,

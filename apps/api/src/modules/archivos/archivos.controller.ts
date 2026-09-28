@@ -34,7 +34,7 @@ export class ArchivosController {
   @Post()
   @UseGuards(LimiteSolicitudesGuard)
   @LimiteSolicitudes({ maximo: 30, ventanaMs: 60_000 })
-  @UseInterceptors(FileInterceptor("foto"))
+  @UseInterceptors(FileInterceptor("foto", { limits: { fileSize: TAMANIO_MAXIMO_BYTES } }))
   subirFoto(
     @UploadedFile(
       new ParseFilePipe({

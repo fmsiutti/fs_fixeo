@@ -349,8 +349,16 @@ describe("PedidosModeracionService.resolverDenuncia", () => {
       expect.objectContaining({ where: { pedidoId: "pedido-1" } }),
     );
     expect(notificaciones.crearVarias).toHaveBeenCalledWith([
-      { usuarioId: "profesional-elegido-1", tipo: "pedido_bloqueado", objetoId: "pedido-1" },
-      { usuarioId: "profesional-elegido-2", tipo: "pedido_bloqueado", objetoId: "pedido-1" },
+      {
+        usuarioId: "profesional-elegido-1",
+        tipo: "pedido_bloqueado_elegido",
+        objetoId: "pedido-1",
+      },
+      {
+        usuarioId: "profesional-elegido-2",
+        tipo: "pedido_bloqueado_elegido",
+        objetoId: "pedido-1",
+      },
     ]);
   });
 

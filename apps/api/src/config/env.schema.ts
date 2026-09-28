@@ -29,6 +29,7 @@ export const envSchema = z
     S3_BUCKET_DOCUMENTOS: optionalString(),
     S3_ACCESS_KEY_ID: optionalString(),
     S3_SECRET_ACCESS_KEY: optionalString(),
+    WEB_PUSH_DRIVER: z.enum(["log", "vapid"]).default("log"),
     WEB_PUSH_VAPID_PUBLIC_KEY: optionalString(),
     WEB_PUSH_VAPID_PRIVATE_KEY: optionalString(),
     WHATSAPP_CLOUD_API_TOKEN: optionalString(),

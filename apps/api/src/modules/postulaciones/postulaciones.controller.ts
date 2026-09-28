@@ -18,9 +18,11 @@ import type {
   PostulacionVistaCliente,
   PostulacionVistaProfesional,
 } from "@fixeo/shared";
+import { LimiteSolicitudes } from "../../common/decorators/limite-solicitudes.decorator.js";
 import { Roles } from "../../common/decorators/roles.decorator.js";
 import { UsuarioActual } from "../../common/decorators/usuario-actual.decorator.js";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard.js";
+import { LimiteSolicitudesGuard } from "../../common/guards/limite-solicitudes.guard.js";
 import { RolesGuard } from "../../common/guards/roles.guard.js";
 import type { Usuario } from "../../generated/prisma/client.js";
 import { ContactosService } from "../contactos/contactos.service.js";
@@ -44,6 +46,8 @@ export class PostulacionesController {
 
   @Post()
   @Roles("profesional")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 20, ventanaMs: 60 * 60 * 1000 })
   crear(
     @UsuarioActual() usuario: Usuario,
     @Body() dto: CrearPostulacionDto,
@@ -68,6 +72,8 @@ export class PostulacionesController {
 
   @Patch(":id/retirar")
   @Roles("profesional")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 20, ventanaMs: 60 * 60 * 1000 })
   retirar(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,
@@ -76,6 +82,8 @@ export class PostulacionesController {
   }
 
   @Patch(":id/descartar")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 30, ventanaMs: 60 * 60 * 1000 })
   descartar(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,
@@ -84,6 +92,8 @@ export class PostulacionesController {
   }
 
   @Patch(":id/revertir-descarte")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 30, ventanaMs: 60 * 60 * 1000 })
   revertirDescarte(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,
@@ -94,6 +104,8 @@ export class PostulacionesController {
   // CL-08: accion del cliente sobre una postulacion ajena, sin @Roles de
   // metodo (mismo criterio que descartar/revertir-descarte).
   @Patch(":id/seleccionar")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 30, ventanaMs: 60 * 60 * 1000 })
   seleccionar(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,
@@ -103,6 +115,8 @@ export class PostulacionesController {
 
   @Patch(":id/no-puedo-tomarlo")
   @Roles("profesional")
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 30, ventanaMs: 60 * 60 * 1000 })
   noPuedoTomarlo(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,
@@ -121,6 +135,8 @@ export class PostulacionesController {
 
   @Post(":id/evento-contacto")
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(LimiteSolicitudesGuard)
+  @LimiteSolicitudes({ maximo: 60, ventanaMs: 60 * 60 * 1000 })
   registrarEventoContacto(
     @UsuarioActual() usuario: Usuario,
     @Param("id") id: string,

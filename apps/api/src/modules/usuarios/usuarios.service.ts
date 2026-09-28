@@ -32,6 +32,9 @@ export class UsuariosService {
         where: { usuarioId, revocadoEn: null },
         data: { revocadoEn: new Date() },
       });
+      // Soft delete, no borra la fila de Usuario (el cascade de la FK no
+      // aplica): hay que limpiar las suscripciones push a mano.
+      await tx.suscripcionPush.deleteMany({ where: { usuarioId } });
       await tx.usuario.update({
         where: { id: usuarioId },
         data: { estado: "eliminado", telefono: `eliminado:${usuarioId}` },
