@@ -1,5 +1,9 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import type { ReseniaPagina, ReseniaVista } from "@fixeo/shared";
+import {
+  MOTIVOS_DENUNCIA_RESENIA_QUE_OCULTAN,
+  type ReseniaPagina,
+  type ReseniaVista,
+} from "@fixeo/shared";
 import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { mapearReseniaAVista, type ReseniaConRelaciones } from "./resenias.vistas.js";
 
@@ -40,7 +44,14 @@ export class ReseniasService {
     return mapearReseniaAVista(actualizada as ReseniaConRelaciones);
   }
 
-  /** CL-09/PR-07: reseñas públicas de un profesional, paginadas por cursor, mas nuevas primero. */
+  /**
+   * CL-09/PR-07: reseñas públicas de un profesional, paginadas por cursor,
+   * mas nuevas primero. Dos vias de ocultamiento (docs/dominio.md §8, D14):
+   * dinamica mientras se revisa una denuncia pendiente por datos personales o
+   * agresion (vuelve a aparecer sola si el moderador la descarta), y
+   * permanente si el moderador la oculto definitivamente
+   * (`ocultaPorModeracionEn`, ver DenunciasService.resolverNoPedido).
+   */
   async listarDeProfesional(profesionalId: string, cursorId?: string): Promise<ReseniaPagina> {
     const perfil = await this.prisma.perfilProfesional.findUnique({
       where: { id: profesionalId },
@@ -50,8 +61,44 @@ export class ReseniasService {
       throw new NotFoundException({ codigo: "no_encontrado", mensaje: "El profesional no existe" });
     }
 
-    const resenias = await this.prisma.resenia.findMany({
+    // docs/dominio.md §8: "se puede denunciar una reseña; se oculta mientras
+    // se revisa solo si alega datos personales o agresion". Dinamico, sin
+    // columna nueva: la reseña vuelve a aparecer sola en cuanto la denuncia
+    // deje de estar "pendiente" (descartada por el moderador). Denuncia.objetoId
+    // es polimorfico (sin FK hacia resenia), asi que no hay relacion Prisma
+    // directa: se resuelve el conjunto de ids ocultos con una query aparte,
+    // acotada a las reseñas de este profesional (si no tiene ninguna, ni
+    // siquiera hace falta consultar denuncias).
+    const idsReseniasDelProfesional = await this.prisma.resenia.findMany({
       where: { profesionalId },
+      select: { id: true },
+    });
+    const idsResenias = idsReseniasDelProfesional.map((resenia) => resenia.id);
+
+    const idsOcultos =
+      idsResenias.length > 0
+        ? (
+            await this.prisma.denuncia.findMany({
+              where: {
+                tipoObjeto: "resenia",
+                estado: "pendiente",
+                motivo: { in: MOTIVOS_DENUNCIA_RESENIA_QUE_OCULTAN },
+                objetoId: { in: idsResenias },
+              },
+              select: { objetoId: true },
+            })
+          ).map((denuncia) => denuncia.objetoId)
+        : [];
+
+    const resenias = await this.prisma.resenia.findMany({
+      where: {
+        profesionalId,
+        // D14: ocultamiento permanente, decidido por el moderador.
+        ocultaPorModeracionEn: null,
+        // notIn: [] equivale a "sin filtro" en Prisma, pero se omite la
+        // condicion cuando no hay nada oculto para no ensuciar el where.
+        ...(idsOcultos.length > 0 ? { id: { notIn: idsOcultos } } : {}),
+      },
       include: INCLUDE_VISTA,
       orderBy: [{ publicadaEn: "desc" }, { id: "desc" }],
       take: TAMANIO_PAGINA + 1,

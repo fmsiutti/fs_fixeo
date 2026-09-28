@@ -8,6 +8,7 @@ import {
 import { PedidosModule } from "../modules/pedidos/pedidos.module.js";
 import { NotificacionesModule } from "../modules/notificaciones/notificaciones.module.js";
 import { ParametrosModule } from "../modules/parametros/parametros.module.js";
+import { EventosModule } from "../modules/eventos/eventos.module.js";
 import { AvisoMatchingProcessor } from "./aviso-matching.processor.js";
 import { BarridosPedidosProcessor } from "./barridos-pedidos.processor.js";
 import { BarridosPedidosScheduler } from "./barridos-pedidos.scheduler.js";
@@ -27,6 +28,7 @@ import { BarridosPedidosScheduler } from "./barridos-pedidos.scheduler.js";
     PedidosModule,
     NotificacionesModule,
     ParametrosModule,
+    EventosModule,
   ],
   providers: [AvisoMatchingProcessor, BarridosPedidosProcessor, BarridosPedidosScheduler],
 })

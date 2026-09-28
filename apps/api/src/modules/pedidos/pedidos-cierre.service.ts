@@ -11,6 +11,7 @@ import { PrismaService } from "../../infra/prisma/prisma.service.js";
 import { EventosService } from "../eventos/eventos.service.js";
 import { ParametrosService } from "../parametros/parametros.service.js";
 import { caducarPostulacionesAbiertas } from "../postulaciones/postulaciones.estados.js";
+import { recalcularPromedioResenias } from "../resenias/resenias.recalculo.js";
 import { transicionar } from "./pedidos.estados.js";
 import { mapearPedidoAVista } from "./pedidos.vistas.js";
 import type { PedidoConRelaciones } from "./pedidos.vistas.js";
@@ -143,20 +144,7 @@ export class PedidosCierreService {
         throw error;
       }
 
-      // Volumen bajo (piloto): recalcular con avg()/count() sobre la tabla es
-      // mas simple y mas dificil de desincronizar que llevar la cuenta a mano.
-      const agregado = await tx.resenia.aggregate({
-        where: { profesionalId },
-        _avg: { puntaje: true },
-        _count: { _all: true },
-      });
-      await tx.perfilProfesional.update({
-        where: { id: profesionalId },
-        data: {
-          promedioResenias: agregado._avg.puntaje,
-          cantidadResenias: agregado._count._all,
-        },
-      });
+      await recalcularPromedioResenias(tx, profesionalId);
 
       seCreoResenia = true;
     });

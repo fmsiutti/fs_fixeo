@@ -124,6 +124,17 @@ describe("ReseniasService.listarDeProfesional", () => {
   function crearService(options: {
     perfil?: { id: string } | null;
     resultadosPorCursor?: Record<string | "sin-cursor", Record<string, unknown>[]>;
+    // IDs que una denuncia pendiente de motivo grave oculta dinamicamente
+    // (docs/dominio.md §8, D14). Vacio por default: ninguna reseña queda
+    // oculta por esta via.
+    idsOcultosPorDenuncia?: string[];
+    // Sugerencia C (code review slice 9): ids de TODAS las reseñas de este
+    // profesional, que el service pide antes de acotar la query de denuncias
+    // graves por `objetoId: { in: ... }`. Un stub no vacio por default
+    // alcanza para la mayoria de los tests (solo importa que la query de
+    // denuncias se dispare); pasar `[]` explicito simula un profesional sin
+    // ninguna reseña, donde ni hace falta consultar denuncias.
+    idsReseniasDelProfesional?: string[];
   }) {
     const prisma = {
       perfilProfesional: {
@@ -132,10 +143,33 @@ describe("ReseniasService.listarDeProfesional", () => {
           .mockResolvedValue(options.perfil === undefined ? { id: "perfil-1" } : options.perfil),
       },
       resenia: {
-        findMany: jest.fn<(args: { cursor?: { id: string } }) => Promise<unknown[]>>((args) => {
+        findMany: jest.fn<
+          (args: {
+            cursor?: { id: string };
+            select?: Record<string, boolean>;
+          }) => Promise<unknown[]>
+        >((args) => {
+          // La query de "ids de reseñas de este profesional" (Sugerencia C)
+          // pide solo `select: { id: true }`, sin cursor; la de listado
+          // paginado usa `include`. Se distinguen por `select`.
+          if (args?.select) {
+            return Promise.resolve(
+              (options.idsReseniasDelProfesional ?? ["resenia-stub"]).map((id) => ({ id })),
+            );
+          }
           const clave = args?.cursor?.id ?? "sin-cursor";
           return Promise.resolve(options.resultadosPorCursor?.[clave] ?? []);
         }),
+      },
+      // Sin denuncias pendientes por default: ninguna reseña queda oculta
+      // (ReseniasService.listarDeProfesional consulta esto antes de traer las
+      // reseñas, ver docs/dominio.md §8).
+      denuncia: {
+        findMany: jest
+          .fn<(args: unknown) => Promise<unknown[]>>()
+          .mockResolvedValue(
+            (options.idsOcultosPorDenuncia ?? []).map((objetoId) => ({ objetoId })),
+          ),
       },
     };
     const service = new ReseniasService(prisma as unknown as PrismaService);
@@ -172,6 +206,91 @@ describe("ReseniasService.listarDeProfesional", () => {
     expect(prisma.resenia.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: [{ publicadaEn: "desc" }, { id: "desc" }] }),
     );
+  });
+
+  describe("ocultamiento (docs/dominio.md §8, D14: dinamico + permanente)", () => {
+    it("siempre excluye las ocultas permanentemente (ocultaPorModeracionEn no nulo), sin denuncias pendientes", async () => {
+      const { service, prisma } = crearService({
+        resultadosPorCursor: { "sin-cursor": [] },
+        idsOcultosPorDenuncia: [],
+      });
+
+      await service.listarDeProfesional("perfil-1");
+
+      expect(prisma.resenia.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ ocultaPorModeracionEn: null }),
+        }),
+      );
+      // Sin nada oculto dinamicamente, el where no agrega un "notIn" vacio.
+      const argumentos = (prisma.resenia.findMany.mock.calls[0]?.[0] ?? {}) as {
+        where?: Record<string, unknown>;
+      };
+      expect(argumentos.where).not.toHaveProperty("id");
+    });
+
+    it("combina el ocultamiento dinamico (denuncia pendiente grave) con el permanente en el mismo where", async () => {
+      const { service, prisma } = crearService({
+        resultadosPorCursor: { "sin-cursor": [] },
+        idsOcultosPorDenuncia: ["resenia-oculta-1", "resenia-oculta-2"],
+      });
+
+      await service.listarDeProfesional("perfil-1");
+
+      expect(prisma.resenia.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ocultaPorModeracionEn: null,
+            id: { notIn: ["resenia-oculta-1", "resenia-oculta-2"] },
+          }),
+        }),
+      );
+    });
+
+    it("una reseña con denuncia pendiente grave Y oculta permanentemente sigue sin aparecer (las dos vias filtran)", async () => {
+      // La reseña permanentemente oculta nunca esta en el resultado de
+      // Prisma (el where real la excluye): el mock ya modela eso devolviendo
+      // una pagina vacia aunque tambien este en idsOcultosPorDenuncia.
+      const { service, prisma } = crearService({
+        resultadosPorCursor: { "sin-cursor": [] },
+        idsOcultosPorDenuncia: ["resenia-doble-ocultamiento"],
+      });
+
+      const pagina = await service.listarDeProfesional("perfil-1");
+
+      expect(pagina.items).toHaveLength(0);
+      expect(prisma.resenia.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ocultaPorModeracionEn: null,
+            id: { notIn: ["resenia-doble-ocultamiento"] },
+          }),
+        }),
+      );
+    });
+
+    it("una reseña sin denuncia pendiente ni ocultamiento permanente se muestra (caso base)", async () => {
+      const { service } = crearService({
+        resultadosPorCursor: { "sin-cursor": [crearReseniaMock({ id: "resenia-visible" })] },
+        idsOcultosPorDenuncia: [],
+      });
+
+      const pagina = await service.listarDeProfesional("perfil-1");
+
+      expect(pagina.items.map((item) => item.id)).toEqual(["resenia-visible"]);
+    });
+
+    it("un profesional sin ninguna reseña no consulta denuncias (Sugerencia C: la query de denuncias graves se acota a sus propias reseñas)", async () => {
+      const { service, prisma } = crearService({
+        resultadosPorCursor: { "sin-cursor": [] },
+        idsReseniasDelProfesional: [],
+      });
+
+      const pagina = await service.listarDeProfesional("perfil-1");
+
+      expect(pagina.items).toHaveLength(0);
+      expect(prisma.denuncia.findMany).not.toHaveBeenCalled();
+    });
   });
 
   it("la paginacion por cursor no repite filas entre paginas", async () => {

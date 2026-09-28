@@ -27,6 +27,18 @@ const TRANSICIONES_VALIDAS: Record<EstadoPedido, readonly EstadoPedido[]> = {
   bloqueado: [],
 };
 
+// D15 (docs/dominio.md §12): estados "activos" de Pedido, los que la
+// suspension de su cliente bloquea (usuarios-admin.service.ts) y los unicos
+// que tiene sentido ofrecer para bloquear desde la cola de denunciados
+// (pedidos-moderacion.service.ts): todos son destino valido de "bloqueado"
+// en TRANSICIONES_VALIDAS, a diferencia de los estados terminales.
+export const ESTADOS_PEDIDO_ACTIVO = [
+  "en_revision",
+  "publicado",
+  "con_postulaciones",
+  "contacto_habilitado",
+] as const;
+
 export function validarTransicion(origen: EstadoPedido, destino: EstadoPedido): void {
   if (!TRANSICIONES_VALIDAS[origen].includes(destino)) {
     throw new ConflictException({

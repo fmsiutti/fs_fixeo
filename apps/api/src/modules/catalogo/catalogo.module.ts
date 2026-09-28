@@ -5,5 +5,7 @@ import { CatalogoService } from "./catalogo.service.js";
 @Module({
   controllers: [CatalogoController],
   providers: [CatalogoService],
+  // CatalogoService lo usa AdminCatalogoController (AdminModule, AD-04).
+  exports: [CatalogoService],
 })
 export class CatalogoModule {}

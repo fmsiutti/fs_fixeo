@@ -8,12 +8,14 @@ import {
 import { AuthModule } from "../auth/auth.module.js";
 import { ContactosModule } from "../contactos/contactos.module.js";
 import { EventosModule } from "../eventos/eventos.module.js";
+import { NotificacionesModule } from "../notificaciones/notificaciones.module.js";
 import { ParametrosModule } from "../parametros/parametros.module.js";
 import { PostulacionesModule } from "../postulaciones/postulaciones.module.js";
 import { PedidosController } from "./pedidos.controller.js";
 import { PedidosCierreService } from "./pedidos-cierre.service.js";
 import { PedidosFeedService } from "./pedidos-feed.service.js";
 import { MatchingService } from "./pedidos-matching.service.js";
+import { PedidosModeracionService } from "./pedidos-moderacion.service.js";
 import { PedidosService } from "./pedidos.service.js";
 
 @Module({
@@ -22,6 +24,7 @@ import { PedidosService } from "./pedidos.service.js";
     ParametrosModule,
     AlmacenamientoModule,
     EventosModule,
+    NotificacionesModule,
     PostulacionesModule,
     // ContactosModule: PedidosController (CL-10) inyecta ContactosService
     // directo para GET :id/contacto.
@@ -32,8 +35,15 @@ import { PedidosService } from "./pedidos.service.js";
     }),
   ],
   controllers: [PedidosController],
-  providers: [PedidosService, PedidosFeedService, PedidosCierreService, MatchingService],
+  providers: [
+    PedidosService,
+    PedidosFeedService,
+    PedidosCierreService,
+    MatchingService,
+    PedidosModeracionService,
+  ],
   // MatchingService lo usa AvisoMatchingProcessor (JobsModule).
-  exports: [MatchingService],
+  // PedidosModeracionService lo usa AdminPedidosController (AdminModule, AD-02).
+  exports: [MatchingService, PedidosModeracionService],
 })
 export class PedidosModule {}

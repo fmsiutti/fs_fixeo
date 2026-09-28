@@ -171,15 +171,19 @@ describe("Denuncias (PR-03: canal de denuncia sobre un pedido, e2e)", () => {
     expect(respuestaPedidoInexistente.body.codigo).toBe("no_encontrado");
   });
 
-  it("rechaza tipoObjeto 'resenia' (todavia no tiene pantalla, slice 8)", async () => {
+  // Actualizado en el slice 9 (AD-02/D14, docs/dominio.md §8 y §12): "resenia"
+  // ya no es un tipoObjeto rechazado por el schema, CL-09 lo desbloquea igual
+  // que "perfil"/"postulacion" en el slice 6. Una reseña inexistente ahora da
+  // 404, no 400 generico (mismo criterio que el test de abajo).
+  it("rechaza tipoObjeto 'resenia' inexistente con 404, no con 400 generico", async () => {
     const cliente = await loginComoCliente(`${PREFIJO_TELEFONO}010`);
 
     const respuesta = await request(app.getHttpServer())
       .post("/denuncias")
       .set("Authorization", `Bearer ${cliente.accessToken}`)
       .send({ tipoObjeto: "resenia", objetoId: randomUUID(), motivo: "Contenido inadecuado" })
-      .expect(400);
-    expect(respuesta.body.codigo).toBe("validacion");
+      .expect(404);
+    expect(respuesta.body.codigo).toBe("no_encontrado");
   });
 
   // Slice 6: CL-09 y PR-05/CL-08 desbloquean "perfil" y "postulacion" (antes

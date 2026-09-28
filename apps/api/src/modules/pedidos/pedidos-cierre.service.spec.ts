@@ -382,7 +382,7 @@ describe("PedidosCierreService.cerrar", () => {
       );
 
       expect(tx.resenia.aggregate).toHaveBeenCalledWith({
-        where: { profesionalId: "perfil-1" },
+        where: { profesionalId: "perfil-1", ocultaPorModeracionEn: null },
         _avg: { puntaje: true },
         _count: { _all: true },
       });

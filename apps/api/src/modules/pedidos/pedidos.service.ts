@@ -232,10 +232,10 @@ export class PedidosService {
 
     // docs/dominio.md §10: evento del mismo cambio que la accion. Solo cuando
     // el pedido queda publicado de una: en_revision todavia no es una
-    // publicacion real (D1: recien lo es si el moderador lo aprueba, eso
-    // pertenece al slice de moderacion). Nota para ese futuro endpoint
-    // (en_revision -> publicado, slice 9): tiene que llamar tambien a
-    // encolarAvisoMatchingSeguro, igual que aca.
+    // publicacion real (D1: recien lo es si el moderador lo aprueba). Ese otro
+    // camino (en_revision -> publicado) vive en
+    // PedidosModeracionService.resolverEnRevision (AD-02, slice 9), que
+    // registra el mismo evento y encola el mismo aviso de matching.
     if (pedidoCreado.estado === "publicado") {
       await this.registrarEventoSeguro({
         tipo: "pedido_publicado",

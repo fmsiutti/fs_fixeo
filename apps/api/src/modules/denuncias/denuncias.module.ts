@@ -7,5 +7,7 @@ import { DenunciasService } from "./denuncias.service.js";
   imports: [AuthModule],
   controllers: [DenunciasController],
   providers: [DenunciasService],
+  // AdminDenunciasController (AD-02, D14) inyecta DenunciasService desde AdminModule.
+  exports: [DenunciasService],
 })
 export class DenunciasModule {}
