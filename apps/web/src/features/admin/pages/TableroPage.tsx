@@ -42,7 +42,7 @@ export function TableroPage() {
   const metricas = metricasQuery.data;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 bg-white px-6 py-8">
       <AdminNav />
 
       <header>

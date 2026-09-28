@@ -15,5 +15,15 @@ export function App() {
     );
   }
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <a
+        href="#contenido-principal"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-teal-700 focus:px-4 focus:py-2 focus:text-white focus-visible:ring-2 focus-visible:ring-teal-900"
+      >
+        Saltar al contenido
+      </a>
+      <RouterProvider router={router} />
+    </>
+  );
 }

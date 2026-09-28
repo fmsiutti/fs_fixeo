@@ -100,7 +100,7 @@ export function RevisarPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <AsistenteHeader paso={5} titulo="Revisá tu pedido" volverA="/publicar/cuando" />
 
       <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4">

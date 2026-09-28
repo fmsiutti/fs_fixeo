@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/* Foco visible global (fallback): la mayoria de los elementos interactivos
+   ya usa la clase Tailwind `focus-visible:ring-2 focus-visible:ring-teal-700`
+   ad-hoc, pero cualquier elemento enfocable que se nos haya escapado igual
+   necesita un foco visible AA (teal-700 = #0f766e). */
+:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}

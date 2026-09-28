@@ -8,6 +8,17 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // injectManifest (en vez del generateSW por defecto) porque necesitamos
+      // codigo propio en el service worker: push + notificationclick +
+      // fallback offline (apps/web/CLAUDE.md). Fuente en src/sw.ts.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
+      injectManifest: {
+        // offline.html e icon-192.png quedan precacheados desde la
+        // instalacion (los usa src/sw.ts para el fallback offline y el push).
+        globPatterns: ["**/*.{js,css,html,svg,png,ico,webmanifest}"],
+      },
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       manifest: {

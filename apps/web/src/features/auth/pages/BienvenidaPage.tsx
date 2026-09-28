@@ -20,7 +20,7 @@ const PASOS = [
 /** CO-01 · Bienvenida. Contenido estatico: sin datos remotos, sin estados de carga/error. */
 export function BienvenidaPage() {
   return (
-    <main className="flex min-h-dvh flex-col justify-between gap-8 bg-white px-6 py-10">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col justify-between gap-8 bg-white px-6 py-10">
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-2 text-center">
           <h1 className="text-3xl font-bold text-teal-800">Fixeo</h1>

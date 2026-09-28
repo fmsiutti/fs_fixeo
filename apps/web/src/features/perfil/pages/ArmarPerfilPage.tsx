@@ -19,7 +19,7 @@ export function ArmarPerfilPage() {
 
   if (perfilQuery.isPending) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-white px-6 py-8">
+      <main id="contenido-principal" className="flex min-h-dvh items-center justify-center bg-white px-6 py-8">
         <Spinner etiqueta="Cargando tu perfil" />
       </main>
     );
@@ -32,7 +32,7 @@ export function ArmarPerfilPage() {
 
   if (perfilQuery.isError && !esPerfilNoArmado) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white px-6 py-8 text-center">
+      <main id="contenido-principal" className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white px-6 py-8 text-center">
         <p className="text-sm text-red-600" role="alert">
           No pudimos cargar tu perfil.
         </p>

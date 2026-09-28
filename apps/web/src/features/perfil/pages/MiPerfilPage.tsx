@@ -61,7 +61,7 @@ export function MiPerfilPage() {
 
   if (perfilQuery.isPending) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-white px-6 py-8">
+      <main id="contenido-principal" className="flex min-h-dvh items-center justify-center bg-white px-6 py-8">
         <Spinner etiqueta="Cargando tu perfil" />
       </main>
     );
@@ -74,7 +74,7 @@ export function MiPerfilPage() {
 
   if (esPerfilNoArmado) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white px-6 py-8 text-center">
+      <main id="contenido-principal" className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white px-6 py-8 text-center">
         <p className="text-slate-700">Todavía no armaste tu perfil profesional.</p>
         <Link to="/perfil/armar" className="min-h-11 font-semibold text-teal-800 underline">
           Armar mi perfil
@@ -85,7 +85,7 @@ export function MiPerfilPage() {
 
   if (perfilQuery.isError) {
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white px-6 py-8 text-center">
+      <main id="contenido-principal" className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-white px-6 py-8 text-center">
         <p className="text-sm text-red-600" role="alert">
           No pudimos cargar tu perfil.
         </p>
@@ -107,7 +107,7 @@ export function MiPerfilPage() {
       : undefined;
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-teal-800">Mi perfil</h1>
         <Link to="/perfil/armar" className="min-h-11 text-sm font-semibold text-teal-800 underline">

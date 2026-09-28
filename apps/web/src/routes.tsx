@@ -3,6 +3,7 @@ import { BienvenidaPage } from "./features/auth/pages/BienvenidaPage";
 import { IngresarPage } from "./features/auth/pages/IngresarPage";
 import { RolPage } from "./features/auth/pages/RolPage";
 import { CuentaPage } from "./features/cuenta/pages/CuentaPage";
+import { NotificacionesPage } from "./features/notificaciones/pages/NotificacionesPage";
 import { InicioPage } from "./features/pedidos/pages/InicioPage";
 import { QueNecesitasPage } from "./features/pedidos/pages/QueNecesitasPage";
 import { ProblemaPage } from "./features/pedidos/pages/ProblemaPage";
@@ -50,6 +51,10 @@ export const router = createBrowserRouter([
   {
     path: "/cuenta",
     element: <CuentaPage />,
+  },
+  {
+    path: "/notificaciones",
+    element: <NotificacionesPage />,
   },
   {
     path: "/publicar/que",

@@ -95,7 +95,7 @@ export function IngresarPage() {
   });
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-10">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-10">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold text-teal-800">Ingresar</h1>
         <p className="text-sm text-slate-600">

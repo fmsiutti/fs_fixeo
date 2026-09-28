@@ -142,7 +142,7 @@ export function MisPostulacionesPage() {
   const items = postulacionesQuery.data?.pages.flatMap((pagina) => pagina.items) ?? [];
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-teal-800">Mis postulaciones</h1>
         <Link to="/trabajos" className="min-h-11 text-sm font-semibold text-teal-800 underline">

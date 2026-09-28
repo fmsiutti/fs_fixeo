@@ -130,7 +130,7 @@ export function ArmarPerfilWizard({ perfilInicial }: ArmarPerfilWizardProps) {
   const pasoAnterior = indiceActual > 0 ? pasos[indiceActual - 1] : undefined;
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <BarraProgresoPerfil
         pasos={pasos}
         pasoActualId={pasoId}

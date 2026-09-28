@@ -170,7 +170,7 @@ export function CerrarPedidoPage() {
     mutacionCerrar.data.desenlacePostergado;
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <header className="flex items-center gap-2">
         <Link
           to={`/pedidos/${pedidoId}`}

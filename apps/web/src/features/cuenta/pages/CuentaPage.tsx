@@ -2,17 +2,24 @@ import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { actualizarUsuarioSchema, type ActualizarUsuario, type CambiarRol } from "@fixeo/shared";
 import { useSesion } from "../../auth/useSesion";
 import { cerrarSesionApi } from "../../auth/api";
 import { actualizarUsuario as guardarDatos, eliminarCuenta } from "../api";
 import { useCambiarRol } from "../hooks/useCambiarRol";
+import { useNotificacionesPush } from "../hooks/useNotificacionesPush";
 import { Button } from "../../../components/ui/Button";
 import { Field } from "../../../components/ui/Field";
 import { ErrorApiHttp } from "../../../lib/http";
 
 const TEXTO_CONFIRMACION_ELIMINAR = "ELIMINAR";
+
+function textoErrorPush(error: unknown): string {
+  if (error instanceof ErrorApiHttp) return error.mensaje;
+  if (error instanceof Error) return error.message;
+  return "No pudimos actualizar tus avisos. Probá de nuevo.";
+}
 
 const ETIQUETAS_ROL: Record<CambiarRol["rol"], string> = {
   cliente: "cliente",
@@ -76,9 +83,22 @@ export function CuentaPage() {
   });
 
   const mutacionRol = useCambiarRol();
+  const notificacionesPush = useNotificacionesPush();
 
   const mutacionLogout = useMutation({
-    mutationFn: cerrarSesionApi,
+    mutationFn: async () => {
+      // Best-effort: en un dispositivo compartido, si no desuscribimos el
+      // push antes de cerrar sesion, la cuenta que se va sigue recibiendo
+      // sus notificaciones (con contenido propio) en este navegador. Un
+      // fallo aca (sin soporte push, sin permiso, red caida) nunca debe
+      // impedir cerrar sesion.
+      try {
+        await notificacionesPush.desactivar.mutateAsync();
+      } catch {
+        // ignorado a proposito
+      }
+      await cerrarSesionApi();
+    },
     onSettled: () => {
       limpiarSesion();
       navigate("/bienvenida", { replace: true });
@@ -129,8 +149,26 @@ export function CuentaPage() {
       : null;
   const otroRol: CambiarRol["rol"] = rolElegible === "profesional" ? "cliente" : "profesional";
 
+  const estadoPush = notificacionesPush.estadoQuery.data;
+  const estaSuscripto = estadoPush?.suscripto ?? false;
+  const cargandoPush =
+    notificacionesPush.activar.isPending || notificacionesPush.desactivar.isPending;
+  const errorMutacionPush = notificacionesPush.activar.error ?? notificacionesPush.desactivar.error;
+
+  function alternarAvisosPush() {
+    // Guard en vez de `disabled` en el boton: asi el switch nunca pierde el
+    // foco ni deja de ser tabbable para teclado/lector de pantalla mientras
+    // la mutacion esta en curso, solo ignora clicks repetidos.
+    if (cargandoPush || notificacionesPush.estadoQuery.isPending) return;
+    if (estaSuscripto) {
+      notificacionesPush.desactivar.mutate();
+    } else {
+      notificacionesPush.activar.mutate();
+    }
+  }
+
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-10">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-10">
       <header>
         <h1 className="text-2xl font-bold text-teal-800">Mi cuenta</h1>
       </header>
@@ -230,15 +268,81 @@ export function CuentaPage() {
       </section>
 
       <section className="flex flex-col divide-y divide-slate-200 rounded-2xl border border-slate-200">
-        {["Direcciones", "Avisos", "Ayuda"].map((item) => (
-          <div
-            key={item}
-            className="flex min-h-11 items-center justify-between px-4 py-3 text-sm text-slate-400"
-          >
-            <span>{item}</span>
-            <span>Próximamente</span>
+        <div className="flex min-h-11 items-center justify-between px-4 py-3 text-sm text-slate-400">
+          <span>Direcciones</span>
+          <span>Próximamente</span>
+        </div>
+
+        {estadoPush?.soportado === false ? (
+          <div className="flex min-h-11 flex-col gap-1 px-4 py-3 text-sm">
+            <span className="text-slate-700">Avisos</span>
+            <span className="text-xs text-slate-400">
+              Tu navegador no admite notificaciones push.
+            </span>
           </div>
-        ))}
+        ) : notificacionesPush.estadoQuery.isError ? (
+          <div className="flex min-h-11 flex-col gap-2 px-4 py-3 text-sm">
+            <span className="text-slate-700">Avisos</span>
+            <p role="alert" className="text-sm text-red-600">
+              No pudimos comprobar el estado de tus notificaciones.
+            </p>
+            <button
+              type="button"
+              className="min-h-11 self-start font-semibold text-teal-800 underline"
+              onClick={() => notificacionesPush.estadoQuery.refetch()}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : notificacionesPush.estadoQuery.isPending ? (
+          <div className="flex min-h-11 items-center px-4 py-3 text-sm text-slate-500">
+            Comprobando el estado de tus avisos…
+          </div>
+        ) : (
+          <div className="flex min-h-11 flex-col gap-2 px-4 py-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="avisos-push" className="text-slate-900">
+                Activar notificaciones push
+              </label>
+              <button
+                id="avisos-push"
+                type="button"
+                role="switch"
+                aria-checked={estaSuscripto}
+                aria-disabled={cargandoPush}
+                onClick={alternarAvisosPush}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 aria-disabled:opacity-50 ${
+                  estaSuscripto ? "bg-teal-700" : "bg-slate-300"
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    estaSuscripto ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+            {errorMutacionPush && (
+              <p role="alert" className="text-sm text-red-600">
+                {textoErrorPush(errorMutacionPush)}
+              </p>
+            )}
+          </div>
+        )}
+
+        <Link
+          to="/notificaciones"
+          className="flex min-h-11 items-center justify-between px-4 py-3 text-sm text-slate-900 underline-offset-2 hover:underline focus-visible:underline"
+        >
+          <span>Notificaciones</span>
+          <span aria-hidden="true">›</span>
+        </Link>
+
+        <div className="flex min-h-11 items-center justify-between px-4 py-3 text-sm text-slate-400">
+          <span>Ayuda</span>
+          <span>Próximamente</span>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">

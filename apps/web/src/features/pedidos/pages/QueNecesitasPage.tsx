@@ -71,7 +71,7 @@ export function QueNecesitasPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <AsistenteHeader paso={1} titulo="¿Qué necesitás?" volverA="/" />
 
       <div className="flex flex-col gap-2">

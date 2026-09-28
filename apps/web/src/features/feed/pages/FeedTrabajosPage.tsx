@@ -51,7 +51,7 @@ export function FeedTrabajosPage() {
   const filtrosActivos = hayFiltrosActivos(filtros);
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
+    <main id="contenido-principal" className="flex min-h-dvh flex-col gap-6 bg-white px-6 py-8">
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-teal-800">Trabajos</h1>
         <Link
