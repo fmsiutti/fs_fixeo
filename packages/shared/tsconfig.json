@@ -5,7 +5,13 @@
     "rootDir": "src",
     "declaration": true,
     "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "moduleResolution": "NodeNext",
+    // Fix 2 (a), revision de codigo del slice 10: `suscribirPushSchema` usa
+    // el constructor `URL` (global tanto en browser como en Node) para
+    // validar la allowlist de host. `tsconfig.base.json` solo trae lib
+    // "ES2022"; este paquete no depende de @types/node (es isomorfico, lo
+    // usa tambien apps/web), asi que hace falta "DOM" para el tipo.
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src"]
 }
