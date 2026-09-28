@@ -46,6 +46,7 @@ model Usuario {
   reseniasEscritas      Resenia[]
   notasInternas         NotaInterna[]      @relation("NotaInternaUsuario")
   notasInternasEscritas NotaInterna[]      @relation("NotaInternaAutor")
+  suscripcionesPush     SuscripcionPush[]
 
   @@map("usuario")
 }
@@ -529,17 +530,17 @@ model Contacto {
 // la cuenta. onDelete Cascade hacia Pedido, mismo criterio que FotoPedido: la
 // resenia no tiene sentido sin el pedido que la origino.
 model Resenia {
-  id                   String   @id @default(uuid())
-  pedidoId             String   @map("pedido_id")
-  contactoId           String   @unique @map("contacto_id")
-  profesionalId        String   @map("profesional_id")
-  clienteId            String   @map("cliente_id")
-  puntaje              Int
-  atributos            String[] @default([])
-  comentario           String?
-  montoDeclarado       Int?     @map("monto_declarado")
-  respuestaProfesional String?  @map("respuesta_profesional")
-  publicadaEn          DateTime @default(now()) @map("publicada_en")
+  id                    String    @id @default(uuid())
+  pedidoId              String    @map("pedido_id")
+  contactoId            String    @unique @map("contacto_id")
+  profesionalId         String    @map("profesional_id")
+  clienteId             String    @map("cliente_id")
+  puntaje               Int
+  atributos             String[]  @default([])
+  comentario            String?
+  montoDeclarado        Int?      @map("monto_declarado")
+  respuestaProfesional  String?   @map("respuesta_profesional")
+  publicadaEn           DateTime  @default(now()) @map("publicada_en")
   // D14: moderacion oculta definitivamente una resenia denunciada por datos
   // personales o agresion. No se borra (docs/dominio.md §8): deja de mostrarse
   // y de contar en el promedio, pero el registro queda.
@@ -586,4 +587,28 @@ model NotaInterna {
 
   @@index([usuarioId])
   @@map("nota_interna")
+}
+
+// Slice 10: suscripciones de Web Push de la PWA, una fila por dispositivo o
+// navegador donde el usuario acepto notificaciones (apps/api/CLAUDE.md
+// "Web Push no es confiable en iOS"). onDelete Cascade hacia Usuario, a
+// diferencia de Notificacion/EventoAnalitico: esto no es un registro de
+// auditoria ni una metrica que deba sobrevivir a la cuenta, es pura
+// configuracion tecnica del navegador que no tiene sentido sin el usuario.
+// `endpoint` es @unique porque es la clave natural que da el navegador: nunca
+// pertenece a dos usuarios a la vez, y si el mismo dispositivo vuelve a
+// suscribirse (el navegador puede rotar el endpoint o reenviar el mismo), el
+// service hace upsert por este campo en vez de duplicar la fila.
+model SuscripcionPush {
+  id        String   @id @default(uuid())
+  usuarioId String   @map("usuario_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  creadaEn  DateTime @default(now()) @map("creada_en")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("suscripcion_push")
 }
