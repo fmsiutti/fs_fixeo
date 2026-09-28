@@ -8,7 +8,7 @@ Marketplace de oficios para el AMBA (piloto). El cliente publica un **pedido**, 
 
 - `docs/dominio.md`: **la fuente de verdad del negocio**. Estados, reglas, visibilidad de datos, modelo de datos, notificaciones, eventos y las decisiones que cerraron los huecos del documento (§12).
 - `docs/pantallas.md`: índice de pantallas (CL, PR, CO, AD) con ruta y reglas clave.
-- "Fixeo — Documento funcional v1": origen de los dos anteriores. `docs/dominio.md` §12 lista las decisiones (D1 a D13) donde se aparta del documento a propósito. Fuera de esas, si el código y el documento se contradicen, gana el documento; avisá antes de desviarte.
+- "Fixeo — Documento funcional v1": origen de los dos anteriores. `docs/dominio.md` §12 lista las decisiones (D1 a D16) donde se aparta del documento a propósito. Fuera de esas, si el código y el documento se contradicen, gana el documento; avisá antes de desviarte.
 - Reglas por app: `apps/api/CLAUDE.md` y `apps/web/CLAUDE.md`.
 - `docs/design-base.html`: Base del diseño de toda la aplicación. Usar como referencia visual para todas las pantallas. Si se contradice con algo del dominio o reglas de negocio, respeta el dominio y adapta el diseño.
 
@@ -80,7 +80,7 @@ Detalle en `docs/dominio.md`.
 ## Cómo trabajar
 
 - Antes de codear leé la ficha o regla en `docs/`. Si tocás más de 3 archivos, escribí un plan de 5 a 8 líneas y avanzá.
-- Los huecos del documento ya están decididos en `docs/dominio.md` §12 (D1 a D13): implementalos tal cual, sin volver a preguntar. Si aparece un caso que ninguna decisión cubre, **preguntá**; no inventes reglas de negocio.
+- Los huecos del documento ya están decididos en `docs/dominio.md` §12 (D1 a D16): implementalos tal cual, sin volver a preguntar. Si aparece un caso que ninguna decisión cubre, **preguntá**; no inventes reglas de negocio.
 - Trabajá en **slices verticales** (DB → API → pantalla → tests), en el orden de `docs/plan-de-construccion.md`.
 - Delegá en los agentes de `.claude/agents/`:
   - `db-migrations`: schema Prisma, migraciones, PostGIS, seed.

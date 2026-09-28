@@ -19,5 +19,5 @@ Orden sugerido de slices verticales. Cada slice incluye base de datos, API, pant
 ## Antes de arrancar cada slice
 
 1. Releé las fichas y reglas involucradas.
-2. Revisá `docs/dominio.md` §12: las decisiones D1 a D13 son de implementación obligatoria y varias atraviesan estos slices. Preguntá solo si aparece un caso que ninguna cubre.
+2. Revisá `docs/dominio.md` §12: las decisiones D1 a D16 son de implementación obligatoria y varias atraviesan estos slices. Preguntá solo si aparece un caso que ninguna cubre.
 3. Orden de trabajo: `db-migrations` → `backend-nest` → `frontend-react` → `test-writer` → `code-reviewer`. `/nueva-feature` lo orquesta.

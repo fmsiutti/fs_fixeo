@@ -220,6 +220,12 @@ El documento funcional dejaba estos puntos sin resolver o con partes contradicto
 
 **D13 · El estado `borrador` no se persiste del lado del servidor.** El documento (§5) y este mismo archivo (§11) dan a entender que existe una fila `Pedido` en estado `borrador`, pero implementarlo exige columnas nulificables en un modelo con FKs `NOT NULL` (categoría, dirección, barrio) que recién se conocen al final del asistente — construir un modelo de borrador aparte es más de lo que el slice de «Publicar pedido» necesita. El asistente (CL-02 a CL-06) vive enteramente en el dispositivo (`localStorage`), para anónimos y logueados por igual; «Seguí donde dejaste» (CL-01) lee ese almacenamiento local, no una fila en la base. Si el piloto necesita continuar un borrador entre dispositivos, hay que modelarlo aparte.
 
+**D14 · Resolución de denuncias de perfil, postulación y reseña.** AD-02 suma una tercera cola con las denuncias pendientes que no son de pedidos. En reseñas, el moderador **mantiene** (la denuncia se descarta y, si estaba oculta por alegar datos personales o agresión, vuelve a mostrarse) u **oculta definitivamente** (la reseña deja de mostrarse y de contar en el promedio; no se borra). En perfil y postulación, descarta o resuelve; resolver no aplica sanción automática: la cola enlaza al usuario en AD-03, donde el moderador decide si suspende.
+
+**D15 · Efectos de suspender un usuario.** Además de cortar el acceso, sus pedidos en estado activo pasan a `bloqueado` por la máquina de estados, con los mismos avisos de D5, y sus postulaciones abiertas (`enviada`, `vista`) pasan a `caducada`. Reactivar la cuenta devuelve el acceso, pero no restaura pedidos ni postulaciones.
+
+**D16 · Tablero por zona y categoría.** AD-05 muestra las métricas de §10 como indicadores globales con filtros de zona, categoría y rango de fechas, más una tabla con las mismas métricas desglosadas por categoría, con una excepción: la finalización del asistente no entra en el desglose. `asistente_iniciado` se registra en CL-02 («qué necesitás»), el primer paso, antes de que el cliente elija categoría, así que ese evento nunca tiene `categoria`; partir esa métrica por categoría daría siempre el mismo conteo global repetido en cada fila, no un desglose real. No hay matriz zona × categoría: con los volúmenes del piloto las celdas quedarían sin muestra.
+
 Si aparece un caso que estas decisiones no cubren, ahí sí preguntá antes de inventar una regla.
 
 ## 13. Datos personales y marco legal (documento §15)
