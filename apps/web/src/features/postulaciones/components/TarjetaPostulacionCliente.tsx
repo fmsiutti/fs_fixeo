@@ -11,6 +11,7 @@ import {
 import { ETIQUETAS_ESTADO_POSTULACION } from "../etiquetas";
 import { formatearEstimacion, nombreCompleto, resumenReputacion } from "../lib/formato";
 import { pedidoQueryKey } from "../../pedidos/api";
+import { FormularioDenuncia } from "../../feed/components/FormularioDenuncia";
 import { Button } from "../../../components/ui/Button";
 import { ErrorApiHttp, urlCompletaApi } from "../../../lib/http";
 import { formatearAntiguedad } from "../../../lib/fecha-relativa";
@@ -39,6 +40,8 @@ export function TarjetaPostulacionCliente({
   const navigate = useNavigate();
   const [confirmandoDescarte, setConfirmandoDescarte] = useState(false);
   const [confirmandoEleccion, setConfirmandoEleccion] = useState(false);
+  const [mostrarDenuncia, setMostrarDenuncia] = useState(false);
+  const [denunciaEnviada, setDenunciaEnviada] = useState(false);
 
   function invalidar() {
     return queryClient.invalidateQueries({ queryKey: postulacionesDePedidoQueryKey(pedidoId) });
@@ -216,6 +219,35 @@ export function TarjetaPostulacionCliente({
             </p>
           )}
         </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {!mostrarDenuncia && !denunciaEnviada && (
+          <button
+            type="button"
+            className="min-h-11 self-start text-xs font-semibold text-slate-500 underline"
+            onClick={() => setMostrarDenuncia(true)}
+          >
+            Denunciar
+          </button>
+        )}
+        {denunciaEnviada && (
+          <p role="status" className="text-sm text-teal-700">
+            Recibimos tu denuncia, la vamos a revisar.
+          </p>
+        )}
+      </div>
+
+      {mostrarDenuncia && (
+        <FormularioDenuncia
+          tipoObjeto="postulacion"
+          objetoId={postulacion.id}
+          onExito={() => {
+            setMostrarDenuncia(false);
+            setDenunciaEnviada(true);
+          }}
+          onCancelar={() => setMostrarDenuncia(false)}
+        />
       )}
     </li>
   );

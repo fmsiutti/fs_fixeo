@@ -1,7 +1,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { crearDenunciaSchema, type CrearDenuncia, type TipoObjetoDenuncia } from "@fixeo/shared";
+import {
+  crearDenunciaSchema,
+  MOTIVOS_DENUNCIA_RESENIA as MOTIVOS_DENUNCIA_RESENIA_COMPARTIDOS,
+  type CrearDenuncia,
+  type TipoObjetoDenuncia,
+} from "@fixeo/shared";
 import { crearDenuncia } from "../api";
 import { Button } from "../../../components/ui/Button";
 import { ErrorApiHttp } from "../../../lib/http";
@@ -26,14 +31,47 @@ const MOTIVOS_DENUNCIA_PERFIL = [
   "Otro motivo",
 ] as const;
 
-const TITULOS_POR_TIPO: Partial<Record<TipoObjetoDenuncia, string>> = {
+// CL-08: "denunciar" una postulacion recibida.
+const MOTIVOS_DENUNCIA_POSTULACION = [
+  "Mensaje con contenido inapropiado",
+  "Perfil sospechoso o falso",
+  "Spam o publicidad",
+  "Otro motivo",
+] as const;
+
+// Cada opcion es { value, label }: el `value` que se manda es texto libre
+// (motivo tipificado en pantalla, no un enum compartido), salvo "resenia" mas
+// abajo, que si necesita mandar la `clave` exacta (no la etiqueta) porque el
+// backend la compara contra MOTIVOS_DENUNCIA_RESENIA_QUE_OCULTAN.
+interface OpcionMotivo {
+  value: string;
+  label: string;
+}
+
+function comoOpciones(motivos: readonly string[]): OpcionMotivo[] {
+  return motivos.map((motivo) => ({ value: motivo, label: motivo }));
+}
+
+// CL-09: "denunciar" una reseña publicada. A diferencia de los demas tipos,
+// la lista es la del contrato (packages/shared), no texto libre local: el
+// backend reacciona programaticamente a la clave para decidir si oculta la
+// reseña mientras se revisa (docs/dominio.md §8).
+const MOTIVOS_DENUNCIA_RESENIA: OpcionMotivo[] = MOTIVOS_DENUNCIA_RESENIA_COMPARTIDOS.map(
+  (motivo) => ({ value: motivo.clave, label: motivo.etiqueta }),
+);
+
+const TITULOS_POR_TIPO: Record<TipoObjetoDenuncia, string> = {
   pedido: "Denunciar este pedido",
   perfil: "Denunciar este perfil",
+  postulacion: "Denunciar esta postulación",
+  resenia: "Denunciar esta reseña",
 };
 
-const MOTIVOS_POR_TIPO: Partial<Record<TipoObjetoDenuncia, readonly string[]>> = {
-  pedido: MOTIVOS_DENUNCIA_PEDIDO,
-  perfil: MOTIVOS_DENUNCIA_PERFIL,
+const MOTIVOS_POR_TIPO: Record<TipoObjetoDenuncia, OpcionMotivo[]> = {
+  pedido: comoOpciones(MOTIVOS_DENUNCIA_PEDIDO),
+  perfil: comoOpciones(MOTIVOS_DENUNCIA_PERFIL),
+  postulacion: comoOpciones(MOTIVOS_DENUNCIA_POSTULACION),
+  resenia: MOTIVOS_DENUNCIA_RESENIA,
 };
 
 const normalizarDetalle = (valor: string): string | undefined => (valor === "" ? undefined : valor);
@@ -47,11 +85,10 @@ interface FormularioDenunciaProps {
 
 /**
  * CO-07 "denunciar" (docs/dominio.md §15: "Canal de denuncia en perfil,
- * pedido y postulacion"). Titulo y motivos varian segun `tipoObjeto`; ambos
- * mapas son parciales porque `postulacion` y `resenia` (los otros dos tipos
- * del contrato) todavia no tienen ninguna pantalla que dispare esta denuncia
- * (regla anti-sobreingenieria: no se prepara codigo sin una pantalla real que
- * lo use).
+ * pedido, postulacion y resenia"). Titulo y motivos varian segun
+ * `tipoObjeto`: los cuatro tipos del contrato ya tienen una pantalla que
+ * dispara esta denuncia (pedido/perfil desde antes, postulacion en CL-08 y
+ * resenia en CL-09).
  */
 export function FormularioDenuncia({
   tipoObjeto,
@@ -59,8 +96,8 @@ export function FormularioDenuncia({
   onExito,
   onCancelar,
 }: FormularioDenunciaProps) {
-  const titulo = TITULOS_POR_TIPO[tipoObjeto] ?? "Denunciar";
-  const motivos = MOTIVOS_POR_TIPO[tipoObjeto] ?? MOTIVOS_DENUNCIA_PEDIDO;
+  const titulo = TITULOS_POR_TIPO[tipoObjeto];
+  const motivos = MOTIVOS_POR_TIPO[tipoObjeto];
 
   const form = useForm<CrearDenuncia>({
     resolver: zodResolver(crearDenunciaSchema),
@@ -93,8 +130,8 @@ export function FormularioDenuncia({
         >
           <option value="">Elegí un motivo</option>
           {motivos.map((motivo) => (
-            <option key={motivo} value={motivo}>
-              {motivo}
+            <option key={motivo.value} value={motivo.value}>
+              {motivo.label}
             </option>
           ))}
         </select>

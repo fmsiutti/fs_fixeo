@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSesion } from "../../auth/useSesion";
 import { colaVerificacionesQueryKey, obtenerColaVerificaciones } from "../api";
+import { AdminNav } from "../components/AdminNav";
 import { ItemVerificacion } from "../components/ItemVerificacion";
 import { Button } from "../../../components/ui/Button";
 import { Spinner } from "../../../components/ui/Spinner";
@@ -27,6 +28,8 @@ export function ColaVerificacionesPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-6 bg-white px-6 py-8">
+      <AdminNav />
+
       <header>
         <h1 className="text-2xl font-bold text-teal-800">Cola de verificación</h1>
         <p className="text-sm text-slate-600">

@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { responderReseniaSchema, type ReseniaVista, type ResponderResenia } from "@fixeo/shared";
 import { misReseniasQueryKey, responderResenia } from "../api";
+import { FormularioDenuncia } from "../../feed/components/FormularioDenuncia";
 import { Button } from "../../../components/ui/Button";
 import { ErrorApiHttp } from "../../../lib/http";
 
@@ -22,6 +23,8 @@ interface TarjetaReseniaProps {
 export function TarjetaResenia({ resenia, puedeResponder = false }: TarjetaReseniaProps) {
   const queryClient = useQueryClient();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [mostrarDenuncia, setMostrarDenuncia] = useState(false);
+  const [denunciaEnviada, setDenunciaEnviada] = useState(false);
 
   const form = useForm<ResponderResenia>({
     resolver: zodResolver(responderReseniaSchema),
@@ -132,6 +135,35 @@ export function TarjetaResenia({ resenia, puedeResponder = false }: TarjetaResen
             </form>
           )}
         </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {!mostrarDenuncia && !denunciaEnviada && (
+          <button
+            type="button"
+            className="min-h-11 self-start text-xs font-semibold text-slate-500 underline"
+            onClick={() => setMostrarDenuncia(true)}
+          >
+            Denunciar
+          </button>
+        )}
+        {denunciaEnviada && (
+          <p role="status" className="text-sm text-teal-700">
+            Recibimos tu denuncia, la vamos a revisar.
+          </p>
+        )}
+      </div>
+
+      {mostrarDenuncia && (
+        <FormularioDenuncia
+          tipoObjeto="resenia"
+          objetoId={resenia.id}
+          onExito={() => {
+            setMostrarDenuncia(false);
+            setDenunciaEnviada(true);
+          }}
+          onCancelar={() => setMostrarDenuncia(false)}
+        />
       )}
     </li>
   );

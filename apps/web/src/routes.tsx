@@ -16,6 +16,11 @@ import { CerrarPedidoPage } from "./features/pedidos/pages/CerrarPedidoPage";
 import { ArmarPerfilPage } from "./features/perfil/pages/ArmarPerfilPage";
 import { MiPerfilPage } from "./features/perfil/pages/MiPerfilPage";
 import { ColaVerificacionesPage } from "./features/admin/pages/ColaVerificacionesPage";
+import { ModeracionPedidosPage } from "./features/admin/pages/ModeracionPedidosPage";
+import { UsuariosAdminPage } from "./features/admin/pages/UsuariosAdminPage";
+import { UsuarioDetalleAdminPage } from "./features/admin/pages/UsuarioDetalleAdminPage";
+import { CatalogoAdminPage } from "./features/admin/pages/CatalogoAdminPage";
+import { TableroPage } from "./features/admin/pages/TableroPage";
 import { FeedTrabajosPage } from "./features/feed/pages/FeedTrabajosPage";
 import { FeedDetalleTrabajoPage } from "./features/feed/pages/FeedDetalleTrabajoPage";
 import { PostularmePage } from "./features/postulaciones/pages/PostularmePage";
@@ -143,10 +148,50 @@ export const router = createBrowserRouter([
     element: <PerfilProfesionalPublicoPage />,
   },
   {
+    path: "/admin",
+    element: (
+      <RutaConRol roles={["moderador", "soporte"]}>
+        <TableroPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/admin/pedidos",
+    element: (
+      <RutaConRol roles={["moderador", "soporte"]}>
+        <ModeracionPedidosPage />
+      </RutaConRol>
+    ),
+  },
+  {
     path: "/admin/verificaciones",
     element: (
       <RutaConRol roles={["moderador", "soporte"]}>
         <ColaVerificacionesPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/admin/usuarios",
+    element: (
+      <RutaConRol roles={["moderador", "soporte"]}>
+        <UsuariosAdminPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/admin/usuarios/:id",
+    element: (
+      <RutaConRol roles={["moderador", "soporte"]}>
+        <UsuarioDetalleAdminPage />
+      </RutaConRol>
+    ),
+  },
+  {
+    path: "/admin/catalogo",
+    element: (
+      <RutaConRol roles={["moderador", "soporte"]}>
+        <CatalogoAdminPage />
       </RutaConRol>
     ),
   },
