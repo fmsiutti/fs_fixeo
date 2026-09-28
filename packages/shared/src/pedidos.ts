@@ -342,3 +342,112 @@ export const pedidoVistaProfesionalSchema = z.object({
 });
 
 export type PedidoVistaProfesional = z.infer<typeof pedidoVistaProfesionalSchema>;
+
+// --- Moderacion (AD-02, docs/dominio.md §3/§12 D1/D5) ---
+
+// Motivos tipificados para bloquear un pedido, sea al resolver la revision
+// manual (rechazar) o al resolver una denuncia (bloquear). Mismo patron que
+// MOTIVOS_RECHAZO_VERIFICACION de profesionales.ts.
+export const MOTIVOS_BLOQUEO_PEDIDO = [
+  "contenido_inapropiado",
+  "datos_de_contacto",
+  "fuera_de_catalogo",
+  "duplicado",
+  "otro",
+] as const;
+
+export const motivoBloqueoPedidoSchema = z.enum(MOTIVOS_BLOQUEO_PEDIDO);
+
+export type MotivoBloqueoPedido = z.infer<typeof motivoBloqueoPedidoSchema>;
+
+// AD-02: resolver un pedido en_revision. El motivo tipificado es obligatorio
+// solo al rechazar (igual patron que resolverVerificacionSchema).
+export const resolverEnRevisionSchema = z
+  .object({
+    accion: z.enum(["aprobar", "rechazar"]),
+    motivo: motivoBloqueoPedidoSchema.optional(),
+    detalle: z.string().trim().min(1).max(500).optional(),
+  })
+  .refine((datos) => datos.accion !== "rechazar" || Boolean(datos.motivo), {
+    message: "El motivo es obligatorio para rechazar",
+    path: ["motivo"],
+  });
+
+export type ResolverEnRevision = z.infer<typeof resolverEnRevisionSchema>;
+
+// AD-02: resolver un pedido denunciado (D5, "moderacion puede bloquear en
+// cualquier estado activo"). Mismo patron: motivo obligatorio solo al
+// bloquear.
+export const resolverPedidoDenunciadoSchema = z
+  .object({
+    accion: z.enum(["descartar", "bloquear"]),
+    motivo: motivoBloqueoPedidoSchema.optional(),
+    detalle: z.string().trim().min(1).max(500).optional(),
+  })
+  .refine((datos) => datos.accion !== "bloquear" || Boolean(datos.motivo), {
+    message: "El motivo es obligatorio para bloquear",
+    path: ["motivo"],
+  });
+
+export type ResolverPedidoDenunciado = z.infer<typeof resolverPedidoDenunciadoSchema>;
+
+// AD-02: vista de moderacion (moderador/soporte). Distinta de PedidoVista
+// (dueno) y PedidoVistaProfesional (feed del profesional): siempre incluye
+// nombre y apellido del cliente (moderar contenido no es "antes/despues de
+// la seleccion"), pero nunca telefono ni direccion exacta, que no hacen
+// falta para esta tarea (docs/dominio.md §7).
+export const pedidoModeracionVistaSchema = z.object({
+  id: z.string().uuid(),
+  cliente: z.object({
+    nombre: z.string().nullable(),
+    apellido: z.string().nullable(),
+  }),
+  categoria: z.object({
+    nombre: z.string(),
+    slug: z.string(),
+  }),
+  descripcion: z.string(),
+  urgencia: urgenciaSchema,
+  barrio: z.object({
+    id: z.string().uuid(),
+    nombre: z.string(),
+  }),
+  estado: estadoPedidoSchema,
+  motivoModeracion: z.string().nullable(),
+  fotos: z.array(
+    z.object({
+      id: z.string().uuid(),
+      url: z.string(),
+      orden: z.number(),
+    }),
+  ),
+  creadoEn: z.string(),
+  // Solo la cola de denunciados la completa (listarDenunciados); la cola de
+  // en_revision no tiene denuncias asociadas y la deja undefined.
+  denuncias: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        motivo: z.string(),
+        detalle: z.string().nullable(),
+        creadoEn: z.string(),
+      }),
+    )
+    .optional(),
+});
+
+export type PedidoModeracionVista = z.infer<typeof pedidoModeracionVistaSchema>;
+
+export const pedidoModeracionPaginaSchema = z.object({
+  items: z.array(pedidoModeracionVistaSchema),
+  cursor: z.string().uuid().nullable(),
+});
+
+export type PedidoModeracionPagina = z.infer<typeof pedidoModeracionPaginaSchema>;
+
+// AD-02: query de paginacion por cursor de las colas de moderacion.
+export const pedidoModeracionColaQuerySchema = z.object({
+  cursor: z.string().uuid().optional(),
+});
+
+export type PedidoModeracionColaQuery = z.infer<typeof pedidoModeracionColaQuerySchema>;

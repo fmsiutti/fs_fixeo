@@ -11,3 +11,4 @@ export * from "./denuncias.js";
 export * from "./postulaciones.js";
 export * from "./contactos.js";
 export * from "./resenias.js";
+export * from "./metricas.js";
